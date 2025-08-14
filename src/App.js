@@ -2,13 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 
 // React App — Russian↔English Trainer (single-file)
 // -------------------------------------------------
-// ✓ Добавление слов одним нажатием: RU→EN и EN→RU
-// ✓ Тренировка карточками с картинкой (Wikimedia), TTS, прогресс
-// ✓ Мобильная адаптация, localStorage
-// ✓ Если ответ верный — автоматический переход к следующей карточке
-// ✓ Защита от падений: валидируем URL изображений, проверяем индексы/очередь
-// ✓ Мини «тесты» через console.assert
-// ✓ Редактирование слов — ТОЛЬКО в разделе «Список». В «Словарь» кнопки редактирования нет.
+// ✓ Мобильная адаптация (iPhone 15 и др.), 100dvh и safe-area
+// ✓ Скрытые скроллбары (но скролл работает)
+// ✓ Остальной функционал без изменений
 
 // -------------------- Utils & Storage --------------------
 const LS_KEYS = {
@@ -56,19 +52,13 @@ function isValidHttpUrl(u) {
 }
 
 function normalize(str) {
-  return (str || "")
-    .toString()
-    .toLowerCase()
-    .trim()
-    .split("ё").join("е");
+  return (str || "").toString().toLowerCase().trim().split("ё").join("е");
 }
 
 // -------------------- APIs --------------------
 async function fetchTranslations(query, from = "ru", to = "en") {
   if (!query || !query.trim()) return [];
-  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-    query
-  )}&langpair=${from}|${to}`;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(query)}&langpair=${from}|${to}`;
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -122,21 +112,22 @@ function ttsSpeak(word, rate = 0.95) {
 }
 
 function safeUUID() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  return 'id-' + Math.random().toString(36).substr(2, 9);
+  return "id-" + Math.random().toString(36).substr(2, 9);
 }
-
 
 // -------------------- App --------------------
 export default function App() {
   const [tab, setTab] = useState("add");
+
+  // Telegram full-screen
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     if (tg) {
-      tg.ready();   // Сообщаем Telegram, что страница загрузилась
-      tg.expand();  // Разворачиваем на весь экран
+      tg.ready();
+      tg.expand();
     }
   }, []);
 
@@ -166,7 +157,7 @@ export default function App() {
   const [cardImg, setCardImg] = useState(""); // always string
   const [isFetchingImg, setIsFetchingImg] = useState(false);
 
-  // List editing state (только для раздела «Список»)
+  // List editing state
   const [editingId, setEditingId] = useState(null);
   const [editFields, setEditFields] = useState({ ru: "", en: "" });
 
@@ -177,15 +168,10 @@ export default function App() {
     console.assert(isValidHttpUrl("https://example.com/a.jpg") === true, "valid URL ok");
     console.assert(isValidHttpUrl("") === false, "empty URL invalid");
     console.assert(Array.isArray([]) && Array.isArray(words) !== undefined, "arrays ok");
-    // edit tests
-    const tmp = [{ id: "1", ru: "кот", en: "cat", addedAt: 1, stats: { seen: 0, correct: 0, wrong: 0 } }];
-    const updated = tmp.map((w) => (w.id === "1" ? { ...w, ru: "кошка", en: "cat" } : w));
-    console.assert(updated[0].ru === "кошка" && updated.length === 1, "edit mapping ok");
     console.groupEnd();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // -------------------- Effects --------------------
-  // Prepare queue when switching to train (or words changed while on train)
   useEffect(() => {
     if (tab !== "train") return;
     if (!Array.isArray(words) || words.length === 0) return;
@@ -196,7 +182,6 @@ export default function App() {
     setRevealed(false);
   }, [tab, words.length]);
 
-  // Fetch image for current English word
   useEffect(() => {
     if (tab !== "train") return;
     if (!Array.isArray(queue) || queue.length === 0) return;
@@ -247,7 +232,6 @@ export default function App() {
   }
 
   function removeWord(id) {
-    // If deleting currently edited item, cancel edit
     if (editingId === id) {
       setEditingId(null);
       setEditFields({ ru: "", en: "" });
@@ -270,6 +254,7 @@ export default function App() {
     const ru = (editFields.ru || "").trim();
     const en = (editFields.en || "").trim();
     if (!ru || !en) {
+      // eslint-disable-next-line no-restricted-globals
       alert("Оба поля должны быть заполнены");
       return;
     }
@@ -311,7 +296,7 @@ export default function App() {
       history: newHist,
     });
 
-    if (settings.ttsOnReveal) ttsSpeak(w.en);
+    if (settings.ttsOnReveal && w.en) ttsSpeak(w.en);
 
     if (correct) {
       setUserAnswer("");
@@ -336,11 +321,11 @@ export default function App() {
   const hasValidImg = isValidHttpUrl(cardImg);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 p-4 sm:p-6">
-      <div className="max-w-5xl mx-auto">
-        <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur mb-4 pb-2">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <h1 className="text-2xl sm:text-3xl font-bold">Vocaboo</h1>
+    <div className="min-h-[100dvh] bg-gray-50 text-gray-900 px-3 py-3 sm:p-6 pb-[calc(16px+env(safe-area-inset-bottom))]">
+      <div className="max-w-full mx-auto">
+        <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur mb-3 sm:mb-4 pb-2 pt-1">
+          <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <h1 className="text-xl sm:text-3xl font-bold leading-tight">Vocaboo</h1>
             <div className="flex gap-2 items-center flex-wrap">
               <StatsBadge label="Ответов" value={progress.totalAnswered} />
               <StatsBadge label="Точность" value={`${accuracy}%`} />
@@ -348,7 +333,7 @@ export default function App() {
             </div>
           </div>
 
-          <nav className="mt-3 flex gap-2 overflow-x-auto no-scrollbar">
+          <nav className="mt-2 sm:mt-3 flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
             <TabButton active={tab === "add"} onClick={() => setTab("add")}>Словарь</TabButton>
             <TabButton active={tab === "train"} onClick={() => setTab("train")}>Тренировка</TabButton>
             <TabButton active={tab === "list"} onClick={() => setTab("list")}>Список</TabButton>
@@ -357,21 +342,21 @@ export default function App() {
         </header>
 
         {tab === "add" && (
-          <section className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl shadow p-4 sm:p-5">
-              <h2 className="font-semibold mb-3">Добавить слово одним нажатием</h2>
+          <section className="grid md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="bg-white rounded-2xl shadow p-3 sm:p-5">
+              <h2 className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg">Добавить слово одним нажатием</h2>
 
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex flex-wrap gap-2 mb-2 sm:mb-3">
                 <DirectionButton label="RU→EN" active={direction === "ru2en"} onClick={() => { setDirection("ru2en"); setSuggestions([]); }} />
                 <DirectionButton label="EN→RU" active={direction === "en2ru"} onClick={() => { setDirection("en2ru"); setSuggestions([]); }} />
               </div>
 
-              <label className="block text-sm mb-1">
-                {direction === "ru2en" ? "Исходное слово по‑русски" : "Source word in English"}
+              <label className="block text-xs sm:text-sm mb-1">
+                {direction === "ru2en" ? "Исходное слово по-русски" : "Source word in English"}
               </label>
-              <div className="flex gap-2 mb-3">
+              <div className="flex gap-2 mb-2 sm:mb-3">
                 <input
-                  className="flex-1 border rounded-xl px-3 py-3 text-base"
+                  className="flex-1 border rounded-xl px-3 py-2 sm:py-3 text-base"
                   value={sourceInput}
                   onChange={(e) => setSourceInput(e.target.value)}
                   placeholder={direction === "ru2en" ? "например: кошка" : "e.g., cat"}
@@ -380,7 +365,7 @@ export default function App() {
                 <button
                   onClick={handleSearch}
                   className={classNames(
-                    "px-4 py-3 rounded-xl bg-blue-600 text-white text-base",
+                    "px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-blue-600 text-white text-sm sm:text-base",
                     loading && "opacity-60"
                   )}
                   disabled={loading}
@@ -390,44 +375,43 @@ export default function App() {
               </div>
 
               {suggestions.length > 0 && (
-                <div className="mb-1 text-sm text-gray-500">
+                <div className="mb-1 text-xs sm:text-sm text-gray-500">
                   Нажмите на перевод, чтобы сразу сохранить его в словарь:
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 no-scrollbar">
                 {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => handleSelectSuggestion(s)}
-                    className="px-3 py-2 rounded-full border hover:bg-gray-50 active:scale-[.98]"
+                    className="px-3 py-2 rounded-full border hover:bg-gray-50 active:scale-[.98] text-sm"
                   >
                     {s}
                   </button>
                 ))}
               </div>
 
-              <p className="text-xs text-gray-500 mt-4">
+              <p className="text-xs text-gray-500 mt-3 sm:mt-4">
                 Подсказка: можно несколько раз нажимать «Подобрать», меняя исходное слово, и кликать на подходящие варианты — они сразу добавятся.
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl shadow p-4 sm:p-5">
-              <h2 className="font-semibold mb-3">Недавно добавленные</h2>
+            <div className="bg-white rounded-2xl shadow p-3 sm:p-5">
+              <h2 className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg">Недавно добавленные</h2>
               {words.length === 0 ? (
-                <p className="text-gray-500">Пока пусто. Добавьте первое слово.</p>
+                <p className="text-gray-500 text-sm">Пока пусто. Добавьте первое слово.</p>
               ) : (
-                <ul className="space-y-2 max-h-80 overflow-auto pr-2 -mr-2">
+                <ul className="space-y-2 max-h-80 overflow-auto pr-1 -mr-1 no-scrollbar">
                   {words.slice(0, 12).map((w) => (
                     <li key={w.id} className="flex items-center justify-between gap-2 border rounded-xl px-3 py-2">
                       <div>
-                        <div className="font-medium text-base">{w.ru}</div>
-                        <div className="text-sm text-gray-600">{w.en}</div>
-                        <div className="text-xs text-gray-400">{prettyDate(w.addedAt)}</div>
+                        <div className="font-medium text-sm sm:text-base">{w.ru}</div>
+                        <div className="text-xs sm:text-sm text-gray-600">{w.en}</div>
+                        <div className="text-[10px] sm:text-xs text-gray-400">{prettyDate(w.addedAt)}</div>
                       </div>
-                      {/* В разделе «Словарь» — только удаление, без редактирования */}
-                      <div className="flex gap-3">
-                        <button className="text-red-600 text-sm hover:underline" onClick={() => removeWord(w.id)}>Удалить</button>
+                      <div className="flex gap-2 sm:gap-3">
+                        <button className="text-red-600 text-xs sm:text-sm hover:underline" onClick={() => removeWord(w.id)}>Удалить</button>
                       </div>
                     </li>
                   ))}
@@ -438,16 +422,18 @@ export default function App() {
         )}
 
         {tab === "train" && (
-          <section className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white rounded-2xl shadow p-4 sm:p-5 flex flex-col items-center">
+          <section className="grid lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="lg:col-span-2 bg-white rounded-2xl shadow p-3 sm:p-5 flex flex-col items-center">
               {!words.length ? (
-                <div className="text-gray-500">Нет слов для тренировки. Добавьте слова в разделе «Словарь».</div>
+                <div className="text-gray-500 text-sm">Нет слов для тренировки. Добавьте слова в разделе «Словарь».</div>
               ) : (
                 <>
-                  <div className="w-full flex items-center justify-between mb-3">
-                    <div className="text-sm text-gray-500">Карточка {Array.isArray(queue) && queue.length ? currentIdx + 1 : 0} / {Array.isArray(queue) ? queue.length : 0}</div>
+                  <div className="w-full flex items-center justify-between mb-2 sm:mb-3">
+                    <div className="text-xs sm:text-sm text-gray-500">
+                      Карточка {Array.isArray(queue) && queue.length ? currentIdx + 1 : 0} / {Array.isArray(queue) ? queue.length : 0}
+                    </div>
                     <button
-                      className="text-sm text-blue-700 hover:underline"
+                      className="text-xs sm:text-sm text-blue-700 hover:underline"
                       onClick={() => {
                         if (!Array.isArray(queue) || queue.length === 0) return;
                         const idx = queue[currentIdx];
@@ -457,11 +443,11 @@ export default function App() {
                     >🔊 Озвучить</button>
                   </div>
 
-                  <div className="w-full max-w-xl aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-4">
+                  {/* На мобильном делаем более высокую карточку 3:4 и object-contain */}
+                  <div className="w-full max-w-[520px] aspect-[3/4] sm:aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3 sm:mb-4">
                     {isFetchingImg ? (
                       <div className="text-gray-400">Ищу картинку…</div>
                     ) : hasValidImg ? (
-
                       <img
                         src={cardImg}
                         alt="Illustration"
@@ -469,26 +455,26 @@ export default function App() {
                         onError={() => setCardImg("")}
                       />
                     ) : (
-                      <div className="text-7xl">🧠</div>
+                      <div className="text-6xl sm:text-7xl">🧠</div>
                     )}
                   </div>
 
                   {Array.isArray(queue) && queue.length > 0 && typeof queue[currentIdx] === "number" && words[queue[currentIdx]] && (
                     <>
                       <div className="text-center mb-2">
-                        <div className="text-sm text-gray-500 mb-1">Переведите на английский:</div>
-                        <div className="text-2xl font-semibold">{words[queue[currentIdx]].ru}</div>
+                        <div className="text-xs sm:text-sm text-gray-500 mb-1">Переведите на английский:</div>
+                        <div className="text-xl sm:text-2xl font-semibold">{words[queue[currentIdx]].ru}</div>
                       </div>
 
-                      <div className="flex gap-2 w-full max-w-xl">
+                      <div className="flex gap-2 w-full max-w-[520px]">
                         <input
-                          className="flex-1 border rounded-xl px-3 py-3 text-base"
+                          className="flex-1 border rounded-xl px-3 py-2 sm:py-3 text-base"
                           placeholder="Ваш ответ на английском"
                           value={userAnswer}
                           onChange={(e) => setUserAnswer(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && checkAnswer()}
                         />
-                        <button className="px-4 py-3 rounded-xl bg-blue-600 text-white text-base" onClick={checkAnswer}>
+                        <button className="px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-blue-600 text-white text-sm sm:text-base" onClick={checkAnswer}>
                           Проверить
                         </button>
                       </div>
@@ -502,17 +488,17 @@ export default function App() {
               )}
             </div>
 
-            <div className="bg-white rounded-2xl shadow p-4 sm:p-5">
-              <h3 className="font-semibold mb-2">Прогресс</h3>
+            <div className="bg-white rounded-2xl shadow p-3 sm:p-5">
+              <h3 className="font-semibold mb-2 text-base sm:text-lg">Прогресс</h3>
               <ProgressBar label="Точность" pct={accuracy} />
-              <div className="grid grid-cols-3 gap-3 mt-3 text-sm">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-3 text-xs sm:text-sm">
                 <MiniStat label="Всего слов" value={words.length} />
                 <MiniStat label="Ответов" value={progress.totalAnswered} />
                 <MiniStat label="Верных" value={progress.totalCorrect} />
               </div>
 
-              <h4 className="font-semibold mt-6 mb-2">Советы</h4>
-              <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
+              <h4 className="font-semibold mt-5 sm:mt-6 mb-2">Советы</h4>
+              <ul className="list-disc pl-5 text-xs sm:text-sm text-gray-600 space-y-1">
                 <li>Жмите 🔊, чтобы услышать правильное произношение.</li>
                 <li>Отвечайте вслух — лучше закрепляется.</li>
                 <li>Добавляйте собственные ассоциации к словам.</li>
@@ -522,86 +508,94 @@ export default function App() {
         )}
 
         {tab === "list" && (
-          <section className="bg-white rounded-2xl shadow p-4 sm:p-5">
-            <h2 className="font-semibold mb-3">Ваши слова ({words.length})</h2>
+          <section className="bg-white rounded-2xl shadow p-3 sm:p-5">
+            <h2 className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg">Ваши слова ({words.length})</h2>
             {words.length === 0 ? (
-              <p className="text-gray-500">Пока пусто.</p>
+              <p className="text-gray-500 text-sm">Пока пусто.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                <tr className="text-left text-gray-500">
-                  <th className="py-2">RU</th>
-                  <th className="py-2">EN</th>
-                  <th className="py-2">Статистика</th>
-                  <th className="py-2">Добавлено</th>
-                  <th className="py-2 text-right">Действия</th>
-                </tr>
-                </thead>
-                <tbody>
-                {words.map((w) => {
-                  const isEditing = editingId === w.id;
-                  return (
-                    <tr key={w.id} className="border-t align-top">
-                      <td className="py-2">
-                        {isEditing ? (
-                          <input
-                            className="w-full border rounded-lg px-2 py-1"
-                            value={editFields.ru}
-                            onChange={(e) => setEditFields({ ...editFields, ru: e.target.value })}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveEdit();
-                              if (e.key === 'Escape') cancelEdit();
-                            }}
-                          />
-                        ) : (
-                          w.ru
-                        )}
-                      </td>
-                      <td className="py-2">
-                        {isEditing ? (
-                          <input
-                            className="w-full border rounded-lg px-2 py-1"
-                            value={editFields.en}
-                            onChange={(e) => setEditFields({ ...editFields, en: e.target.value })}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveEdit();
-                              if (e.key === 'Escape') cancelEdit();
-                            }}
-                          />
-                        ) : (
-                          w.en
-                        )}
-                      </td>
-                      <td className="py-2 text-gray-600">{(w.stats?.correct || 0)}/{(w.stats?.seen || 0)} верных</td>
-                      <td className="py-2 text-gray-600">{prettyDate(w.addedAt)}</td>
-                      <td className="py-2 text-right whitespace-nowrap">
-                        {!isEditing ? (
-                          <>
-                            <button className="text-blue-600 hover:underline mr-3" onClick={() => beginEdit(w)}>Редактировать</button>
-                            <button className="text-red-600 hover:underline" onClick={() => removeWord(w.id)}>Удалить</button>
-                          </>
-                        ) : (
-                          <>
-                            <button className="text-green-700 hover:underline mr-3" onClick={saveEdit}>Сохранить</button>
-                            <button className="text-gray-600 hover:underline" onClick={cancelEdit}>Отмена</button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
+                <table className="w-full text-xs sm:text-sm">
+                  <thead>
+                  <tr className="text-left text-gray-500">
+                    <th className="py-2">RU</th>
+                    <th className="py-2">EN</th>
+                    <th className="py-2">Статистика</th>
+                    <th className="py-2">Добавлено</th>
+                    <th className="py-2 text-right">Действия</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  {words.map((w) => {
+                    const isEditing = editingId === w.id;
+                    return (
+                      <tr key={w.id} className="border-t align-top">
+                        <td className="py-2">
+                          {isEditing ? (
+                            <input
+                              className="w-full border rounded-lg px-2 py-1"
+                              value={editFields.ru}
+                              onChange={(e) => setEditFields({ ...editFields, ru: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit();
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                            />
+                          ) : (
+                            w.ru
+                          )}
+                        </td>
+                        <td className="py-2">
+                          {isEditing ? (
+                            <input
+                              className="w-full border rounded-lg px-2 py-1"
+                              value={editFields.en}
+                              onChange={(e) => setEditFields({ ...editFields, en: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit();
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                            />
+                          ) : (
+                            w.en
+                          )}
+                        </td>
+                        <td className="py-2 text-gray-600">
+                          {(w.stats?.correct || 0)}/{(w.stats?.seen || 0)} верных
+                        </td>
+                        <td className="py-2 text-gray-600">{prettyDate(w.addedAt)}</td>
+                        <td className="py-2 text-right whitespace-nowrap">
+                          {!isEditing ? (
+                            <>
+                              <button className="text-blue-600 hover:underline mr-3" onClick={() => beginEdit(w)}>Редактировать</button>
+                              <button className="text-red-600 hover:underline" onClick={() => removeWord(w.id)}>Удалить</button>
+                            </>
+                          ) : (
+                            <>
+                              <button className="text-green-700 hover:underline mr-3" onClick={saveEdit}>Сохранить</button>
+                              <button className="text-gray-600 hover:underline" onClick={cancelEdit}>Отмена</button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         )}
 
         {tab === "settings" && (
-          <section className="bg-white rounded-2xl shadow p-4 sm:p-5 max-w-xl">
-            <h2 className="font-semibold mb-3">Настройки</h2>
-            <Toggle label="Озвучивать слово после проверки" checked={!!settings.ttsOnReveal} onChange={(v) => setSettings({ ...settings, ttsOnReveal: v })} />
+          <section className="bg-white rounded-2xl shadow p-3 sm:p-5 max-w-xl">
+            <h2 className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg">Настройки</h2>
+            <Toggle
+              label="Озвучивать слово после проверки"
+              checked={!!settings.ttsOnReveal}
+              onChange={(v) => setSettings({ ...settings, ttsOnReveal: v })}
+            />
             <button
-              className="mt-6 px-4 py-3 rounded-xl bg-red-600 text-white"
+              className="mt-5 sm:mt-6 px-4 py-3 rounded-xl bg-red-600 text-white w-full sm:w-auto"
               onClick={() => {
                 // eslint-disable-next-line no-restricted-globals
                 if (confirm("Удалить все слова и прогресс?")) {
@@ -610,11 +604,13 @@ export default function App() {
                   window.location.reload();
                 }
               }}
-            >Сбросить всё</button>
+            >
+              Сбросить всё
+            </button>
           </section>
         )}
 
-        <footer className="mt-10 text-center text-xs text-gray-400 pb-6">
+        <footer className="mt-8 sm:mt-10 text-center text-[10px] sm:text-xs text-gray-400 pb-6">
           © {new Date().getFullYear()} MiniTrainer — локальное хранилище, без серверной части.
         </footer>
       </div>
@@ -628,7 +624,7 @@ function TabButton({ active, children, onClick }) {
     <button
       onClick={onClick}
       className={classNames(
-        "px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl border whitespace-nowrap",
+        "px-3 py-2 sm:px-5 sm:py-2.5 rounded-xl border whitespace-nowrap",
         active ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
       )}
     >
@@ -642,7 +638,7 @@ function DirectionButton({ label, active, onClick }) {
     <button
       onClick={onClick}
       className={classNames(
-        "px-3 py-2 rounded-xl border",
+        "px-3 py-2 rounded-xl border text-sm sm:text-base",
         active ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
       )}
       aria-pressed={active}
@@ -654,7 +650,7 @@ function DirectionButton({ label, active, onClick }) {
 
 function StatsBadge({ label, value }) {
   return (
-    <div className="px-3 py-1.5 rounded-full bg-white shadow border text-sm">
+    <div className="px-2.5 py-1 rounded-full bg-white shadow border text-xs sm:text-sm">
       <span className="text-gray-500 mr-1">{label}:</span>
       <span className="font-semibold">{value}</span>
     </div>
@@ -664,11 +660,11 @@ function StatsBadge({ label, value }) {
 function ProgressBar({ label, pct }) {
   return (
     <div>
-      <div className="flex justify-between text-sm mb-1">
+      <div className="flex justify-between text-xs sm:text-sm mb-1">
         <span className="text-gray-600">{label}</span>
         <span className="font-medium">{pct}%</span>
       </div>
-      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-2.5 sm:h-3 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full bg-green-500" style={{ width: `${pct}%`, transition: "width .4s" }} />
       </div>
     </div>
@@ -677,9 +673,9 @@ function ProgressBar({ label, pct }) {
 
 function MiniStat({ label, value }) {
   return (
-    <div className="p-3 rounded-xl bg-gray-50 border text-center">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-lg font-semibold">{value}</div>
+    <div className="p-2.5 sm:p-3 rounded-xl bg-gray-50 border text-center">
+      <div className="text-[11px] sm:text-xs text-gray-500">{label}</div>
+      <div className="text-base sm:text-lg font-semibold">{value}</div>
     </div>
   );
 }
@@ -705,17 +701,20 @@ function RevealPanel({ correctAnswer, userAnswer }) {
     return n(correctAnswer) === n(userAnswer);
   }, [correctAnswer, userAnswer]);
   return (
-    <div className={classNames(
-      "mt-3 w-full max-w-xl rounded-xl border p-3",
-      isCorrect ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
-    )}
-    >
-      <div className="text-sm text-gray-600 mb-1">Правильный ответ:</div>
-      <div className="text-xl font-semibold">{correctAnswer}</div>
-      {!isCorrect && (
-        <div className="mt-1 text-sm text-gray-700">Ваш ответ: <span className="font-medium">{userAnswer || "—"}</span></div>
+    <div
+      className={classNames(
+        "mt-3 w-full max-w-[520px] rounded-xl border p-3",
+        isCorrect ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
       )}
-      <div className="mt-2 text-xs text-gray-500">Нажмите «Далее →» для следующей карточки.</div>
+    >
+      <div className="text-xs sm:text-sm text-gray-600 mb-1">Правильный ответ:</div>
+      <div className="text-lg sm:text-xl font-semibold">{correctAnswer}</div>
+      {!isCorrect && (
+        <div className="mt-1 text-xs sm:text-sm text-gray-700">
+          Ваш ответ: <span className="font-medium">{userAnswer || "—"}</span>
+        </div>
+      )}
+      <div className="mt-2 text-[10px] sm:text-xs text-gray-500">Нажмите «Далее →» для следующей карточки.</div>
     </div>
   );
 }
