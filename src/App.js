@@ -132,6 +132,13 @@ function safeUUID() {
 // -------------------- App --------------------
 export default function App() {
   const [tab, setTab] = useState("add");
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();   // Сообщаем Telegram, что страница загрузилась
+      tg.expand();  // Разворачиваем на весь экран
+    }
+  }, []);
 
   // Data
   const [words, setWords] = useLocalStorage(LS_KEYS.words, []);
@@ -317,17 +324,6 @@ export default function App() {
       }
     } else {
       setRevealed(true);
-    }
-  }
-
-  function nextCard() {
-    setUserAnswer("");
-    setRevealed(false);
-    if (currentIdx + 1 < queue.length) setCurrentIdx(currentIdx + 1);
-    else {
-      const idxs = words.map((_, i) => i).sort(() => Math.random() - 0.5);
-      setQueue(idxs);
-      setCurrentIdx(0);
     }
   }
 
