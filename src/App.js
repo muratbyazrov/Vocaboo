@@ -363,7 +363,6 @@ export default function App() {
         paddingBottom: 'env(safe-area-inset-bottom, 20px)'
       }}
     >
-      {/* Header теперь sticky и обычный flex-элемент */}
       <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur border-b" style={{marginTop: 20}}>
         <div className="px-3 pt-[calc(env(safe-area-inset-top))] pb-2 max-w-full mx-auto">
           <div className="flex items-center justify-between">
@@ -385,7 +384,7 @@ export default function App() {
 
       <main
         className="
-          flex-1
+          flex-1 min-h-0
           pb-[calc(32px+env(safe-area-inset-bottom))]
           px-3
           flex flex-col
@@ -395,17 +394,17 @@ export default function App() {
         style={{overflow: 'hidden'}}
       >
         <div
-          className="mx-auto flex-1 flex flex-col"
+          className="mx-auto flex-1 min-h-0 flex flex-col"
           style={{
             width: '100%',
-            maxWidth: '480px', // увеличиваем максимальную ширину
+            maxWidth: '480px',
             minHeight: 0
           }}
         >
           {/* TRAIN */}
           {tab === 'train' && (
-            <section className="grid gap-4 flex-1">
-              <div className="bg-white rounded-2xl shadow p-3 flex flex-col items-center flex-1">
+            <section className="grid gap-4 flex-1 min-h-0">
+              <div className="bg-white rounded-2xl shadow p-3 flex flex-col items-center flex-1 min-h-0">
                 {!words.length ? (
                   <div className="text-gray-500 text-sm text-center">
                     Нет слов для тренировки. Добавьте слова в разделе «Словарь».
@@ -490,8 +489,8 @@ export default function App() {
 
           {/* ADD */}
           {tab === 'add' && (
-            <section className="grid md:grid-cols-2 gap-4 flex-1">
-              <div className="bg-white rounded-2xl shadow p-3 flex flex-col">
+            <section className="grid md:grid-cols-2 gap-4 flex-1 min-h-0">
+              <div className="bg-white rounded-2xl shadow p-3 flex flex-col min-h-0">
                 <h2 className="font-semibold mb-2 text-base">Добавить слово одним нажатием</h2>
                 <div className="flex flex-wrap gap-2 mb-2">
                   <DirectionButton
@@ -551,12 +550,12 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1">
+              <div className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1 min-h-0">
                 <h2 className="font-semibold mb-2 text-base">Недавно добавленные</h2>
                 {words.length === 0 ? (
                   <p className="text-gray-500 text-sm">Пока пусто. Добавьте первое слово.</p>
                 ) : (
-                  <ul className="space-y-2 max-h-80 overflow-auto pr-1 -mr-1 no-scrollbar flex-1">
+                  <ul className="space-y-2 max-h-80 overflow-auto pr-1 -mr-1 no-scrollbar flex-1 min-h-0">
                     {words.slice(0, 12).map((w) => (
                       <li
                         key={w.id}
@@ -585,12 +584,12 @@ export default function App() {
 
           {/* LIST */}
           {tab === 'list' && (
-            <section className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1">
+            <section className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1 min-h-0">
               <h2 className="font-semibold mb-2 text-base">Ваши слова ({words.length})</h2>
               {words.length === 0 ? (
                 <p className="text-gray-500 text-sm">Пока пусто.</p>
               ) : (
-                <div className="overflow-auto no-scrollbar -mx-1 px-1 flex-1">
+                <div className="overflow-auto no-scrollbar -mx-1 px-1 flex-1 min-h-0">
                   <table className="w-full text-xs">
                     <thead>
                     <tr className="text-left text-gray-500">
@@ -689,7 +688,7 @@ export default function App() {
 
           {/* SETTINGS */}
           {tab === 'settings' && (
-            <section className="bg-white rounded-2xl shadow p-3 max-w-xl flex flex-col flex-1">
+            <section className="bg-white rounded-2xl shadow p-3 max-w-xl flex flex-col flex-1 min-h-0">
               <h2 className="font-semibold mb-2 text-base">Настройки</h2>
               <Toggle
                 label="Озвучивать слово после проверки"
