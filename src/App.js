@@ -349,25 +349,28 @@ export default function App() {
   return (
     // Корневой фикс-слой: весь экран, без скролла страницы
     <div
-      className="fixed inset-0 bg-gray-50 text-gray-900 select-none"
-      style={{ height: "var(--app-vh)" }}
+      className="fixed inset-x-0 bg-gray-50 text-gray-900 select-none"
+      style={{
+        height: 'var(--app-vh)',
+        top: '50px' // отступ сверху
+      }}
     >
       {/* Фиксированный header */}
-      <header className="fixed top-0 left-0 right-0 z-10 bg-gray-50/90 backdrop-blur border-b">
+      <header className="fixed top-100 left-0 right-0 z-10 bg-gray-50/90 backdrop-blur border-b">
         <div className="px-3 pt-[calc(env(safe-area-inset-top))] pb-2 max-w-full mx-auto">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold leading-tight">Vocaboo</h1>
             <div className="flex gap-2 items-center">
-              <StatsBadge label="Ans" value={progress.totalAnswered} />
-              <StatsBadge label="Acc" value={`${accuracy}%`} />
-              <StatsBadge label="Streak" value={progress.streak} />
+              <StatsBadge label="Ans" value={progress.totalAnswered}/>
+              <StatsBadge label="Acc" value={`${accuracy}%`}/>
+              <StatsBadge label="Streak" value={progress.streak}/>
             </div>
           </div>
           <nav className="mt-2 flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
-            <TabButton active={tab === "train"} onClick={() => setTab("train")}>Тренировка</TabButton>
-            <TabButton active={tab === "add"} onClick={() => setTab("add")}>Словарь</TabButton>
-            <TabButton active={tab === "list"} onClick={() => setTab("list")}>Список</TabButton>
-            <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>Настройки</TabButton>
+            <TabButton active={tab === 'train'} onClick={() => setTab('train')}>Тренировка</TabButton>
+            <TabButton active={tab === 'add'} onClick={() => setTab('add')}>Словарь</TabButton>
+            <TabButton active={tab === 'list'} onClick={() => setTab('list')}>Список</TabButton>
+            <TabButton active={tab === 'settings'} onClick={() => setTab('settings')}>Настройки</TabButton>
           </nav>
         </div>
       </header>
@@ -385,7 +388,7 @@ export default function App() {
       >
         <div className="max-w-full mx-auto">
           {/* TRAIN */}
-          {tab === "train" && (
+          {tab === 'train' && (
             <section className="grid gap-4">
               <div className="bg-white rounded-2xl shadow p-3 flex flex-col items-center">
                 {!words.length ? (
@@ -398,11 +401,12 @@ export default function App() {
                       <div className="text-xs text-gray-500">
                         {Array.isArray(queue) && queue.length
                           ? `Карточка ${currentIdx + 1} / ${queue.length}`
-                          : "—"}
+                          : '—'}
                       </div>
                     </div>
 
-                    <div className="w-full max-w-[320px] aspect-[1/1] bg-gray-100 rounded-2xl overflow-contain flex items-center justify-center mb-3">
+                    <div
+                      className="w-full max-w-[320px] aspect-[1/1] bg-gray-100 rounded-2xl overflow-contain flex items-center justify-center mb-3">
                       {isFetchingImg ? (
                         <div className="text-gray-400">Ищу картинку…</div>
                       ) : hasValidImg ? (
@@ -410,7 +414,7 @@ export default function App() {
                           src={cardImg}
                           alt="Illustration"
                           className="max-w-full max-h-full object-contain"
-                          onError={() => setCardImg("")}
+                          onError={() => setCardImg('')}
                         />
                       ) : (
                         <div className="text-6xl">🧠</div>
@@ -419,7 +423,7 @@ export default function App() {
 
                     {Array.isArray(queue) &&
                       queue.length > 0 &&
-                      typeof queue[currentIdx] === "number" &&
+                      typeof queue[currentIdx] === 'number' &&
                       words[queue[currentIdx]] && (
                         <>
                           <div className="text-center mb-2">
@@ -443,12 +447,12 @@ export default function App() {
                                   onPointerDown={() => speakChoice(c)} // озвучка на касание
                                   onClick={() => pickChoice(c)}
                                   className={classNames(
-                                    "px-4 py-3 rounded-xl border text-base active:scale-[.99] text-left",
+                                    'px-4 py-3 rounded-xl border text-base active:scale-[.99] text-left',
                                     revealed
                                       ? correctChoice
-                                        ? "bg-green-50 border-green-300"
-                                        : "bg-red-50 border-red-300"
-                                      : "bg-white hover:bg-gray-50"
+                                        ? 'bg-green-50 border-green-300'
+                                        : 'bg-red-50 border-red-300'
+                                      : 'bg-white hover:bg-gray-50'
                                   )}
                                   aria-label={`Choice: ${c}`}
                                 >
@@ -459,7 +463,7 @@ export default function App() {
                           </div>
 
                           {revealed && (
-                            <RevealPanel correctAnswer={words[queue[currentIdx]].en} />
+                            <RevealPanel correctAnswer={words[queue[currentIdx]].en}/>
                           )}
                         </>
                       )}
@@ -470,48 +474,48 @@ export default function App() {
           )}
 
           {/* ADD */}
-          {tab === "add" && (
+          {tab === 'add' && (
             <section className="grid md:grid-cols-2 gap-4">
               <div className="bg-white rounded-2xl shadow p-3">
                 <h2 className="font-semibold mb-2 text-base">Добавить слово одним нажатием</h2>
                 <div className="flex flex-wrap gap-2 mb-2">
                   <DirectionButton
                     label="RU→EN"
-                    active={direction === "ru2en"}
+                    active={direction === 'ru2en'}
                     onClick={() => {
-                      setDirection("ru2en");
+                      setDirection('ru2en');
                       setSuggestions([]);
                     }}
                   />
                   <DirectionButton
                     label="EN→RU"
-                    active={direction === "en2ru"}
+                    active={direction === 'en2ru'}
                     onClick={() => {
-                      setDirection("en2ru");
+                      setDirection('en2ru');
                       setSuggestions([]);
                     }}
                   />
                 </div>
                 <label className="block text-xs mb-1">
-                  {direction === "ru2en" ? "Исходное слово по-русски" : "Source word in English"}
+                  {direction === 'ru2en' ? 'Исходное слово по-русски' : 'Source word in English'}
                 </label>
                 <div className="flex gap-2 mb-2">
                   <input
                     className="flex-1 border rounded-xl px-3 py-2 text-base"
                     value={sourceInput}
                     onChange={(e) => setSourceInput(e.target.value)}
-                    placeholder={direction === "ru2en" ? "например: кошка" : "e.g., cat"}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    placeholder={direction === 'ru2en' ? 'например: кошка' : 'e.g., cat'}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   />
                   <button
                     onClick={handleSearch}
                     className={classNames(
-                      "px-3 py-2 rounded-xl bg-blue-600 text-white text-sm",
-                      loading && "opacity-60"
+                      'px-3 py-2 rounded-xl bg-blue-600 text-white text-sm',
+                      loading && 'opacity-60'
                     )}
                     disabled={loading}
                   >
-                    {loading ? "Ищу…" : "Подобрать"}
+                    {loading ? 'Ищу…' : 'Подобрать'}
                   </button>
                 </div>
                 {suggestions.length > 0 && (
@@ -565,7 +569,7 @@ export default function App() {
           )}
 
           {/* LIST */}
-          {tab === "list" && (
+          {tab === 'list' && (
             <section className="bg-white rounded-2xl shadow p-3">
               <h2 className="font-semibold mb-2 text-base">Ваши слова ({words.length})</h2>
               {words.length === 0 ? (
@@ -593,11 +597,11 @@ export default function App() {
                                 className="w-full border rounded-lg px-2 py-1"
                                 value={editFields.ru}
                                 onChange={(e) =>
-                                  setEditFields({ ...editFields, ru: e.target.value })
+                                  setEditFields({...editFields, ru: e.target.value})
                                 }
                                 onKeyDown={(e) => {
-                                  if (e.key === "Enter") saveEdit();
-                                  if (e.key === "Escape") cancelEdit();
+                                  if (e.key === 'Enter') saveEdit();
+                                  if (e.key === 'Escape') cancelEdit();
                                 }}
                               />
                             ) : (
@@ -610,11 +614,11 @@ export default function App() {
                                 className="w-full border rounded-lg px-2 py-1"
                                 value={editFields.en}
                                 onChange={(e) =>
-                                  setEditFields({ ...editFields, en: e.target.value })
+                                  setEditFields({...editFields, en: e.target.value})
                                 }
                                 onKeyDown={(e) => {
-                                  if (e.key === "Enter") saveEdit();
-                                  if (e.key === "Escape") cancelEdit();
+                                  if (e.key === 'Enter') saveEdit();
+                                  if (e.key === 'Escape') cancelEdit();
                                 }}
                               />
                             ) : (
@@ -669,19 +673,19 @@ export default function App() {
           )}
 
           {/* SETTINGS */}
-          {tab === "settings" && (
+          {tab === 'settings' && (
             <section className="bg-white rounded-2xl shadow p-3 max-w-xl">
               <h2 className="font-semibold mb-2 text-base">Настройки</h2>
               <Toggle
                 label="Озвучивать слово после проверки"
                 checked={!!settings.ttsOnReveal}
-                onChange={(v) => setSettings({ ...settings, ttsOnReveal: v })}
+                onChange={(v) => setSettings({...settings, ttsOnReveal: v})}
               />
               <button
                 className="mt-5 px-4 py-3 rounded-xl bg-red-600 text-white w-full sm:w-auto"
                 onClick={() => {
                   // eslint-disable-next-line no-restricted-globals
-                  if (confirm("Удалить все слова и прогресс?")) {
+                  if (confirm('Удалить все слова и прогресс?')) {
                     localStorage.removeItem(LS_KEYS.words);
                     localStorage.removeItem(LS_KEYS.progress);
                     window.location.reload();
@@ -703,7 +707,7 @@ export default function App() {
 }
 
 // -------------------- Small UI Components --------------------
-function TabButton({ active, children, onClick }) {
+function TabButton({active, children, onClick}) {
   return (
     <button
       onClick={onClick}
