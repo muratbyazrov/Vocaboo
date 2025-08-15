@@ -370,7 +370,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="w-full max-w-[520px] aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3">
+                  <div className="w-full max-w-[320px] aspect-[1/1] bg-gray-100 rounded-2xl overflow-contain flex items-center justify-center mb-3">
                     {isFetchingImg ? (
                       <div className="text-gray-400">Ищу картинку…</div>
                     ) : hasValidImg ? (
