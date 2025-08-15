@@ -413,7 +413,7 @@ export default function App() {
                         <img
                           src={cardImg}
                           alt="Illustration"
-                          className="max-w-full max-h-full object-contain"
+                          className="w-full h-full object-cover"
                           onError={() => setCardImg('')}
                         />
                       ) : (
