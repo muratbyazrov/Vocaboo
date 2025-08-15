@@ -379,8 +379,8 @@ export default function App() {
       <main
         className="
           absolute inset-0
-          pt-[calc(72px+env(safe-area-inset-top))]   /* высота шапки ~72px */
-          pb-[calc(16px+env(safe-area-inset-bottom))]
+          pt-[calc(100px+env(safe-area-inset-top))]
+          pb-[calc(32px+env(safe-area-inset-bottom))]
           px-3
           overflow-auto
           no-scrollbar
@@ -406,7 +406,7 @@ export default function App() {
                     </div>
 
                     <div
-                      className="w-full max-w-[320px] aspect-[1/1] bg-gray-100 rounded-2xl overflow-contain flex items-center justify-center mb-3">
+                      className="w-full max-w-[320px] aspect-[3/2] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3">
                       {isFetchingImg ? (
                         <div className="text-gray-400">Ищу картинку…</div>
                       ) : hasValidImg ? (
