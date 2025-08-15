@@ -352,7 +352,7 @@ export default function App() {
       className="fixed inset-x-0 bg-gray-50 text-gray-900 select-none"
       style={{
         height: 'var(--app-vh)',
-        top: '80px' // отступ сверху
+        top: '100px' // отступ сверху
       }}
     >
       {/* Фиксированный header */}
