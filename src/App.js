@@ -359,7 +359,7 @@ export default function App() {
       style={{height: 'var(--app-vh)'}}
     >
       {/* Фиксированный header */}
-      <header className="fixed top-0 left-0 right-0 z-10 bg-gray-50/90 backdrop-blur border-b">
+      <header className="fixed top-3 left-0 right-0 z-10 bg-gray-50/90 backdrop-blur border-b">
         <div className="px-3 pt-[calc(env(safe-area-inset-top))] pb-2 max-w-full mx-auto">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold leading-tight">Vocaboo</h1>
