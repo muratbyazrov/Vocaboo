@@ -334,7 +334,7 @@ export default function App() {
 
   return (
     <div
-      className="min-h-[100dvh] bg-gray-50 text-gray-900 px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-[calc(8px+env(safe-area-inset-top))]" // NEW: верхний отступ
+      className="min-h-[100dvh] bg-gray-50 text-gray-900 px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-[calc(50px+env(safe-area-inset-top))]" // NEW: верхний отступ
     >
       <div className="max-w-full mx-auto">
         <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur mb-3 pb-2 pt-1">
