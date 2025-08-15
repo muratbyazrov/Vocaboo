@@ -11,3 +11,20 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+/* Скрыть горизонтальный скроллбар для всех элементов */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb #fff;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

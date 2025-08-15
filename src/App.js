@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {useEffect, useMemo, useState} from 'react';
 
 // React App — Vocaboo (mobile-first)
 // -------------------------------------------------
@@ -11,9 +11,9 @@ import React, { useEffect, useMemo, useState } from "react";
 
 // -------------------- Utils & Storage --------------------
 const LS_KEYS = {
-  words: "ruen_words_v1",
-  progress: "ruen_progress_v1",
-  settings: "ruen_settings_v1",
+  words: 'ruen_words_v1',
+  progress: 'ruen_progress_v1',
+  settings: 'ruen_settings_v1',
 };
 
 function useLocalStorage(key, initialValue) {
@@ -28,13 +28,14 @@ function useLocalStorage(key, initialValue) {
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
-    } catch {}
+    } catch {
+    }
   }, [key, value]);
   return [value, setValue];
 }
 
 function classNames(...xs) {
-  return xs.filter(Boolean).join(" ");
+  return xs.filter(Boolean).join(' ');
 }
 
 function prettyDate(ts) {
@@ -43,33 +44,33 @@ function prettyDate(ts) {
 }
 
 function isValidHttpUrl(u) {
-  if (typeof u !== "string") return false;
+  if (typeof u !== 'string') return false;
   const s = u.trim();
   if (!s) return false;
   try {
     const url = new URL(s);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return url.protocol === 'http:' || url.protocol === 'https:';
   } catch {
     return false;
   }
 }
 
 function normalize(str) {
-  return (str || "").toString().toLowerCase().trim().split("ё").join("е");
+  return (str || '').toString().toLowerCase().trim().split('ё').join('е');
 }
 
 // TitleCase для отображения (не меняем исходные данные)
 function titleCase(s) {
-  return (s || "")
+  return (s || '')
     .split(/(\s|-)/) // сохраняем пробелы и дефисы как отдельные части
     .map((part) => {
-      if (part === " " || part === "-") return part;
+      if (part === ' ' || part === '-') return part;
       return part.charAt(0).toUpperCase() + part.slice(1);
     })
-    .join("");
+    .join('');
 }
 
-async function fetchTranslations(query, from = "ru", to = "en") {
+async function fetchTranslations(query, from = 'ru', to = 'en') {
   if (!query || !query.trim()) return [];
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
     query
@@ -84,17 +85,17 @@ async function fetchTranslations(query, from = "ru", to = "en") {
       data.matches.forEach((m) => m?.translation && suggestions.add(m.translation));
     }
     return Array.from(suggestions)
-      .map((s) => (typeof s === "string" ? s.trim() : ""))
+      .map((s) => (typeof s === 'string' ? s.trim() : ''))
       .filter(Boolean)
       .slice(0, 10);
   } catch (e) {
-    console.warn("Translation fetch failed", e);
+    console.warn('Translation fetch failed', e);
     return [];
   }
 }
 
 async function fetchImageForWord(enWord) {
-  const term = (enWord || "").toString().trim();
+  const term = (enWord || '').toString().trim();
   if (!term) return null;
   const q = encodeURIComponent(term);
   const url = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*&generator=search&gsrsearch=${q}`;
@@ -108,33 +109,34 @@ async function fetchImageForWord(enWord) {
       return isValidHttpUrl(src) ? src : null;
     }
   } catch (e) {
-    console.warn("Image fetch failed", e);
+    console.warn('Image fetch failed', e);
   }
   return null;
 }
 
 function ttsSpeak(word, rate = 0.95) {
   try {
-    if (!("speechSynthesis" in window)) return;
-    const utt = new SpeechSynthesisUtterance(word || "");
-    utt.lang = "en-US";
+    if (!('speechSynthesis' in window)) return;
+    const utt = new SpeechSynthesisUtterance(word || '');
+    utt.lang = 'en-US';
     utt.rate = rate;
     const voices = window.speechSynthesis.getVoices?.() || [];
-    const voice = voices.find((v) => /en-/i.test(v?.lang || ""));
+    const voice = voices.find((v) => /en-/i.test(v?.lang || ''));
     if (voice) utt.voice = voice;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utt);
-  } catch {}
+  } catch {
+  }
 }
 
 function safeUUID() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  return "id-" + Math.random().toString(36).substr(2, 9);
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'id-' + Math.random().toString(36).substr(2, 9);
 }
 
 // -------------------- App --------------------
 export default function App() {
-  const [tab, setTab] = useState("train");
+  const [tab, setTab] = useState('train');
 
   // Telegram fullscreen
   useEffect(() => {
@@ -148,11 +150,11 @@ export default function App() {
   // Устанавливаем переменную --app-vh под высоту экрана (iOS/Android-safe)
   useEffect(() => {
     const setVh = () => {
-      document.documentElement.style.setProperty("--app-vh", `${window.innerHeight}px`);
+      document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`);
     };
     setVh();
-    window.addEventListener("resize", setVh);
-    return () => window.removeEventListener("resize", setVh);
+    window.addEventListener('resize', setVh);
+    return () => window.removeEventListener('resize', setVh);
   }, []);
 
   // Data
@@ -168,8 +170,8 @@ export default function App() {
   });
 
   // Add/Lookup
-  const [direction, setDirection] = useState("ru2en");
-  const [sourceInput, setSourceInput] = useState("");
+  const [direction, setDirection] = useState('ru2en');
+  const [sourceInput, setSourceInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
 
@@ -177,17 +179,17 @@ export default function App() {
   const [queue, setQueue] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [cardImg, setCardImg] = useState("");
+  const [cardImg, setCardImg] = useState('');
   const [isFetchingImg, setIsFetchingImg] = useState(false);
   const [choices, setChoices] = useState([]);
 
   // Edit (list)
   const [editingId, setEditingId] = useState(null);
-  const [editFields, setEditFields] = useState({ ru: "", en: "" });
+  const [editFields, setEditFields] = useState({ru: '', en: ''});
 
   // Init queue
   useEffect(() => {
-    if (tab !== "train") return;
+    if (tab !== 'train') return;
     if (!Array.isArray(words) || words.length === 0) return;
     const idxs = words.map((_, i) => i).sort(() => Math.random() - 0.5);
     setQueue(idxs);
@@ -197,10 +199,10 @@ export default function App() {
 
   // Fetch image
   useEffect(() => {
-    if (tab !== "train") return;
+    if (tab !== 'train') return;
     if (!Array.isArray(queue) || queue.length === 0) return;
     const idx = queue[currentIdx];
-    if (typeof idx !== "number") return;
+    if (typeof idx !== 'number') return;
     const w = words[idx];
     if (!w || !w.en) return;
     let aborted = false;
@@ -208,7 +210,7 @@ export default function App() {
       setIsFetchingImg(true);
       try {
         const img = await fetchImageForWord(w.en);
-        if (!aborted) setCardImg(isValidHttpUrl(img) ? img : "");
+        if (!aborted) setCardImg(isValidHttpUrl(img) ? img : '');
       } finally {
         if (!aborted) setIsFetchingImg(false);
       }
@@ -220,14 +222,14 @@ export default function App() {
 
   // Build 4 choices
   useEffect(() => {
-    if (tab !== "train") return;
+    if (tab !== 'train') return;
     if (!Array.isArray(queue) || queue.length === 0) return;
     const idx = queue[currentIdx];
-    if (typeof idx !== "number") return;
+    if (typeof idx !== 'number') return;
     const correct = words[idx]?.en?.trim();
     if (!correct) return;
     const pool = words
-      .map((w, i) => (i === idx ? null : (w?.en || "").trim()))
+      .map((w, i) => (i === idx ? null : (w?.en || '').trim()))
       .filter(Boolean);
     const decoys = [...new Set(pool)].sort(() => Math.random() - 0.5).slice(0, 3);
     const all = [correct, ...decoys].sort(() => Math.random() - 0.5);
@@ -239,49 +241,53 @@ export default function App() {
     const q = sourceInput.trim();
     if (!q) return;
     setLoading(true);
-    const from = direction === "ru2en" ? "ru" : "en";
-    const to = direction === "ru2en" ? "en" : "ru";
+    const from = direction === 'ru2en' ? 'ru' : 'en';
+    const to = direction === 'ru2en' ? 'en' : 'ru';
     const s = await fetchTranslations(q, from, to);
     setSuggestions(s);
     setLoading(false);
   }
+
   function handleSelectSuggestion(s) {
     const q = sourceInput.trim();
     if (!q || !s) return;
-    const ru = direction === "ru2en" ? q : s;
-    const en = direction === "ru2en" ? s : q;
+    const ru = direction === 'ru2en' ? q : s;
+    const en = direction === 'ru2en' ? s : q;
     const newItem = {
       id: safeUUID(),
       ru,
       en,
       addedAt: Date.now(),
-      stats: { seen: 0, correct: 0, wrong: 0 },
+      stats: {seen: 0, correct: 0, wrong: 0},
     };
     setWords([newItem, ...words]);
   }
 
   function beginEdit(w) {
     setEditingId(w.id);
-    setEditFields({ ru: w.ru, en: w.en });
+    setEditFields({ru: w.ru, en: w.en});
   }
+
   function cancelEdit() {
     setEditingId(null);
-    setEditFields({ ru: "", en: "" });
+    setEditFields({ru: '', en: ''});
   }
+
   function saveEdit() {
     if (!editingId) return;
-    const ru = (editFields.ru || "").trim();
-    const en = (editFields.en || "").trim();
+    const ru = (editFields.ru || '').trim();
+    const en = (editFields.en || '').trim();
     if (!ru || !en) {
       // eslint-disable-next-line no-restricted-globals
-      alert("Оба поля должны быть заполнены");
+      alert('Оба поля должны быть заполнены');
       return;
     }
-    const updated = words.map((w) => (w.id === editingId ? { ...w, ru, en } : w));
+    const updated = words.map((w) => (w.id === editingId ? {...w, ru, en} : w));
     setWords(updated);
     setEditingId(null);
-    setEditFields({ ru: "", en: "" });
+    setEditFields({ru: '', en: ''});
   }
+
   function removeWord(id) {
     if (editingId === id) cancelEdit();
     setWords(words.filter((w) => w.id !== id));
@@ -315,7 +321,7 @@ export default function App() {
     );
     setWords(updated);
 
-    const newHist = [...(progress.history || []).slice(-199), { ts: Date.now(), correct }];
+    const newHist = [...(progress.history || []).slice(-199), {ts: Date.now(), correct}];
     setProgress({
       totalAnswered: (progress.totalAnswered || 0) + 1,
       totalCorrect: (progress.totalCorrect || 0) + (correct ? 1 : 0),
@@ -350,13 +356,10 @@ export default function App() {
     // Корневой фикс-слой: весь экран, без скролла страницы
     <div
       className="fixed inset-x-0 bg-gray-50 text-gray-900 select-none"
-      style={{
-        height: 'var(--app-vh)',
-        top: '100px' // отступ сверху
-      }}
+      style={{height: 'var(--app-vh)'}}
     >
       {/* Фиксированный header */}
-      <header className="fixed top-100 left-0 right-0 z-10 bg-gray-50/90 backdrop-blur border-b">
+      <header className="fixed top-0 left-0 right-0 z-10 bg-gray-50/90 backdrop-blur border-b">
         <div className="px-3 pt-[calc(env(safe-area-inset-top))] pb-2 max-w-full mx-auto">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold leading-tight">Vocaboo</h1>
@@ -406,7 +409,7 @@ export default function App() {
                     </div>
 
                     <div
-                      className="w-full max-w-[320px] aspect-[3/2] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3">
+                      className="w-full max-w-[340px] aspect-[4/5] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3">
                       {isFetchingImg ? (
                         <div className="text-gray-400">Ищу картинку…</div>
                       ) : hasValidImg ? (
@@ -712,21 +715,22 @@ function TabButton({active, children, onClick}) {
     <button
       onClick={onClick}
       className={classNames(
-        "px-3 py-2 rounded-xl border whitespace-nowrap",
-        active ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
+        'px-3 py-2 rounded-xl border whitespace-nowrap',
+        active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white hover:bg-gray-50'
       )}
     >
       {children}
     </button>
   );
 }
-function DirectionButton({ label, active, onClick }) {
+
+function DirectionButton({label, active, onClick}) {
   return (
     <button
       onClick={onClick}
       className={classNames(
-        "px-3 py-2 rounded-xl border text-sm",
-        active ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
+        'px-3 py-2 rounded-xl border text-sm',
+        active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white hover:bg-gray-50'
       )}
       aria-pressed={active}
     >
@@ -734,7 +738,8 @@ function DirectionButton({ label, active, onClick }) {
     </button>
   );
 }
-function StatsBadge({ label, value }) {
+
+function StatsBadge({label, value}) {
   return (
     <div className="px-2.5 py-1 rounded-full bg-white shadow border text-xs">
       <span className="text-gray-500 mr-1">{label}:</span>
@@ -742,16 +747,19 @@ function StatsBadge({ label, value }) {
     </div>
   );
 }
-function Toggle({ label, checked, onChange }) {
+
+function Toggle({label, checked, onChange}) {
   return (
     <label className="flex items-center gap-3 cursor-pointer select-none py-2">
-      <input type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} className="peer hidden" />
-      <span className="w-10 h-6 flex items-center bg-gray-300 rounded-full relative after:content-[''] after:absolute after:w-5 after:h-5 after:bg-white after:rounded-full after:left-0.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:translate-x-4" />
+      <input type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} className="peer hidden"/>
+      <span
+        className="w-10 h-6 flex items-center bg-gray-300 rounded-full relative after:content-[''] after:absolute after:w-5 after:h-5 after:bg-white after:rounded-full after:left-0.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:translate-x-4"/>
       <span className="text-sm">{label}</span>
     </label>
   );
 }
-function RevealPanel({ correctAnswer }) {
+
+function RevealPanel({correctAnswer}) {
   return (
     <div className="mt-3 w-full max-w-[520px] rounded-xl border p-3 border-red-300 bg-red-50">
       <div className="text-xs text-gray-600 mb-1">Правильный ответ:</div>
