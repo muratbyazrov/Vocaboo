@@ -355,10 +355,16 @@ export default function App() {
   return (
     <div
       className="fixed inset-0 bg-gray-50 text-gray-900 select-none flex flex-col"
-      style={{height: 'var(--app-vh)'}}
+      style={{
+        height: 'var(--app-vh)',
+        maxHeight: 'var(--app-vh)',
+        overflow: 'hidden',
+        paddingTop: 'env(safe-area-inset-top, 20px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 20px)'
+      }}
     >
       {/* Header теперь sticky и обычный flex-элемент */}
-      <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur border-b">
+      <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur border-b" style={{marginTop: 20}}>
         <div className="px-3 pt-[calc(env(safe-area-inset-top))] pb-2 max-w-full mx-auto">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold leading-tight">Vocaboo</h1>
@@ -382,15 +388,24 @@ export default function App() {
           flex-1
           pb-[calc(32px+env(safe-area-inset-bottom))]
           px-3
-          overflow-auto
-          no-scrollbar
+          flex flex-col
+          max-h-[calc(var(--app-vh)-theme(spacing.16))]
+          overflow-hidden
         "
+        style={{overflow: 'hidden'}}
       >
-        <div className="max-w-full mx-auto">
+        <div
+          className="mx-auto flex-1 flex flex-col"
+          style={{
+            width: '100%',
+            maxWidth: '480px', // увеличиваем максимальную ширину
+            minHeight: 0
+          }}
+        >
           {/* TRAIN */}
           {tab === 'train' && (
-            <section className="grid gap-4">
-              <div className="bg-white rounded-2xl shadow p-3 flex flex-col items-center">
+            <section className="grid gap-4 flex-1">
+              <div className="bg-white rounded-2xl shadow p-3 flex flex-col items-center flex-1">
                 {!words.length ? (
                   <div className="text-gray-500 text-sm text-center">
                     Нет слов для тренировки. Добавьте слова в разделе «Словарь».
@@ -406,7 +421,7 @@ export default function App() {
                     </div>
 
                     <div
-                      className="w-full max-w-[340px] aspect-[4/5] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3">
+                      className="w-full max-w-[340px] aspect-[1/1] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3">
                       {isFetchingImg ? (
                         <div className="text-gray-400">Ищу картинку…</div>
                       ) : hasValidImg ? (
@@ -475,8 +490,8 @@ export default function App() {
 
           {/* ADD */}
           {tab === 'add' && (
-            <section className="grid md:grid-cols-2 gap-4">
-              <div className="bg-white rounded-2xl shadow p-3">
+            <section className="grid md:grid-cols-2 gap-4 flex-1">
+              <div className="bg-white rounded-2xl shadow p-3 flex flex-col">
                 <h2 className="font-semibold mb-2 text-base">Добавить слово одним нажатием</h2>
                 <div className="flex flex-wrap gap-2 mb-2">
                   <DirectionButton
@@ -536,12 +551,12 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow p-3">
+              <div className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1">
                 <h2 className="font-semibold mb-2 text-base">Недавно добавленные</h2>
                 {words.length === 0 ? (
                   <p className="text-gray-500 text-sm">Пока пусто. Добавьте первое слово.</p>
                 ) : (
-                  <ul className="space-y-2 max-h-80 overflow-auto pr-1 -mr-1 no-scrollbar">
+                  <ul className="space-y-2 max-h-80 overflow-auto pr-1 -mr-1 no-scrollbar flex-1">
                     {words.slice(0, 12).map((w) => (
                       <li
                         key={w.id}
@@ -570,12 +585,12 @@ export default function App() {
 
           {/* LIST */}
           {tab === 'list' && (
-            <section className="bg-white rounded-2xl shadow p-3">
+            <section className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1">
               <h2 className="font-semibold mb-2 text-base">Ваши слова ({words.length})</h2>
               {words.length === 0 ? (
                 <p className="text-gray-500 text-sm">Пока пусто.</p>
               ) : (
-                <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
+                <div className="overflow-auto no-scrollbar -mx-1 px-1 flex-1">
                   <table className="w-full text-xs">
                     <thead>
                     <tr className="text-left text-gray-500">
@@ -674,7 +689,7 @@ export default function App() {
 
           {/* SETTINGS */}
           {tab === 'settings' && (
-            <section className="bg-white rounded-2xl shadow p-3 max-w-xl">
+            <section className="bg-white rounded-2xl shadow p-3 max-w-xl flex flex-col flex-1">
               <h2 className="font-semibold mb-2 text-base">Настройки</h2>
               <Toggle
                 label="Озвучивать слово после проверки"
