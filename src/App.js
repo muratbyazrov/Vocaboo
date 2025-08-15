@@ -1,13 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
-/**
- * Vocaboo — Telegram Mini App (refactored)
- * -------------------------------------------------
- * ✅ Фикс высоты под экран (100dvh / iOS Safari vh bug)
- * ✅ Верхний отступ под шапку Telegram
- * ✅ Исправлена озвучка: стабильная загрузка голосов, вызов на касание
- * ✅ Лёгкий рефакторинг по хукам и компонентам
- */
+// React App — Vocaboo (mobile-first)
+// -------------------------------------------------
+// ✓ Мобильный интерфейс (100dvh, safe-area, крупные кнопки)
+// ✓ Тренировка: 4 варианта ответа-кнопки (EN), озвучка на касание
+// ✓ Верхний отступ под шапку Telegram
+// ✓ Отображение слов в словаре с заглавной буквы (display-only)
 
 // -------------------- Utils & Storage --------------------
 const LS_KEYS = {
@@ -58,10 +56,10 @@ function normalize(str) {
   return (str || "").toString().toLowerCase().trim().split("ё").join("е");
 }
 
-// TitleCase только для отображения
+// NEW: TitleCase для отображения (не меняем исходные данные)
 function titleCase(s) {
   return (s || "")
-    .split(/(\s|-)/)
+    .split(/(\s|-)/) // сохраняем пробелы и дефисы как отдельные части
     .map((part) => {
       if (part === " " || part === "-") return part;
       return part.charAt(0).toUpperCase() + part.slice(1);
@@ -71,7 +69,9 @@ function titleCase(s) {
 
 async function fetchTranslations(query, from = "ru", to = "en") {
   if (!query || !query.trim()) return [];
-  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(query)}&langpair=${from}|${to}`;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+    query
+  )}&langpair=${from}|${to}`;
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -110,115 +110,38 @@ async function fetchImageForWord(enWord) {
   return null;
 }
 
+function ttsSpeak(word, rate = 0.95) {
+  try {
+    if (!("speechSynthesis" in window)) return;
+    const utt = new SpeechSynthesisUtterance(word || "");
+    utt.lang = "en-US";
+    utt.rate = rate;
+    const voices = window.speechSynthesis.getVoices?.() || [];
+    const voice = voices.find((v) => /en-/i.test(v?.lang || ""));
+    if (voice) utt.voice = voice;
+    // чуть-чуть подстрахуемся в iOS: отмена прошлой фразы и мгновенный старт
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utt);
+  } catch {}
+}
+
 function safeUUID() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return "id-" + Math.random().toString(36).substr(2, 9);
 }
 
-// -------------------- TTS (robust) --------------------
-function useTTS() {
-  const voicesReadyRef = useRef(false);
-  const queuedWordRef = useRef(null);
-
-  // Загружаем голоса корректно в WebView/Telegram (iOS/Android)
-  useEffect(() => {
-    if (!("speechSynthesis" in window)) return;
-
-    function handleVoicesChanged() {
-      const list = window.speechSynthesis.getVoices?.() || [];
-      voicesReadyRef.current = list.length > 0;
-      if (voicesReadyRef.current && queuedWordRef.current) {
-        // Если кто-то успел нажать до загрузки голосов — догоним озвучкой
-        speakNow(queuedWordRef.current);
-        queuedWordRef.current = null;
-      }
-    }
-
-    // Пробуем инициировать загрузку голосов
-    window.speechSynthesis.getVoices?.();
-    window.speechSynthesis.onvoiceschanged = handleVoicesChanged;
-
-    // Доп. страховка: некоторые WebView не вызывают onvoiceschanged
-    const t = setTimeout(handleVoicesChanged, 600);
-    return () => {
-      clearTimeout(t);
-      window.speechSynthesis.onvoiceschanged = null;
-    };
-  }, []);
-
-  function speakNow(text, rate = 0.95) {
-    try {
-      if (!text || !("speechSynthesis" in window)) return;
-
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.lang = "en-US"; // общий хороший дефолт
-      utt.rate = rate;
-
-      const voices = window.speechSynthesis.getVoices?.() || [];
-      // Предпочтение англоязычного голоса
-      const preferred = voices.find((v) => /en[-_](US|GB|AU)/i.test(v.lang || "")) || voices.find((v) => /en/i.test(v.lang || ""));
-      if (preferred) utt.voice = preferred;
-
-      // iOS hack: отменяем любые очереди и сразу говорим
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utt);
-    } catch {}
-  }
-
-  // Публичный метод: вызывать строго в ответ на пользовательское действие (tap/click)
-  function speak(text) {
-    if (!text || !("speechSynthesis" in window)) return;
-    const voices = window.speechSynthesis.getVoices?.() || [];
-    if (!voices.length) {
-      // Если голоса ещё не прогрузились, ставим в очередь
-      queuedWordRef.current = text;
-      // Триггерим прогрузку
-      window.speechSynthesis.getVoices?.();
-      return;
-    }
-    speakNow(text);
-  }
-
-  return { speak };
-}
-
-// -------------------- useAppViewport (safe 100dvh + top inset) --------------------
-function useAppViewport() {
-  useEffect(() => {
-    const root = document.documentElement;
-
-    function setVH() {
-      const vh = window.innerHeight * 0.01;
-      root.style.setProperty("--app-vh", `${vh}px`);
-    }
-
-    setVH();
-    window.addEventListener("resize", setVH);
-
-    // Telegram Mini Apps: подвинем контент ниже шапки на 8px + safe-area
-    const tg = window.Telegram?.WebApp;
-    const topInset = 8; // базовый отступ сверху
-    const safeInsetTop = Number.parseInt(getComputedStyle(document.documentElement).getPropertyValue("env(safe-area-inset-top)") || "0", 10) || 0;
-    const headerPad = topInset + safeInsetTop;
-    root.style.setProperty("--tg-top-pad", `${headerPad}px`);
-
-    try {
-      if (tg) {
-        tg.ready();
-        tg.expand();
-      }
-    } catch {}
-
-    return () => window.removeEventListener("resize", setVH);
-  }, []);
-}
-
 // -------------------- App --------------------
 export default function App() {
-  useAppViewport();
-  const { speak } = useTTS();
-
   const [tab, setTab] = useState("train");
+
+  // Telegram fullscreen
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+  }, []);
 
   // Data
   const [words, setWords] = useLocalStorage(LS_KEYS.words, []);
@@ -258,7 +181,7 @@ export default function App() {
     setQueue(idxs);
     setCurrentIdx(0);
     setRevealed(false);
-  }, [tab, words]);
+  }, [tab, words.length]);
 
   // Fetch image
   useEffect(() => {
@@ -278,9 +201,7 @@ export default function App() {
         if (!aborted) setIsFetchingImg(false);
       }
     })();
-    return () => {
-      aborted = true;
-    };
+    return () => { aborted = true; };
   }, [tab, currentIdx, queue, words]);
 
   // Build 4 choices
@@ -338,6 +259,7 @@ export default function App() {
     const ru = (editFields.ru || "").trim();
     const en = (editFields.en || "").trim();
     if (!ru || !en) {
+      // eslint-disable-next-line no-restricted-globals
       alert("Оба поля должны быть заполнены");
       return;
     }
@@ -349,6 +271,11 @@ export default function App() {
   function removeWord(id) {
     if (editingId === id) cancelEdit();
     setWords(words.filter((w) => w.id !== id));
+  }
+
+  // NEW: отдельно вынес озвучку на касание
+  function speakChoice(c) {
+    if (c) ttsSpeak(c);
   }
 
   // Проверка выбранного варианта
@@ -382,7 +309,7 @@ export default function App() {
       history: newHist,
     });
 
-    if (settings.ttsOnReveal && w.en) speak(w.en);
+    if (settings.ttsOnReveal && w.en) ttsSpeak(w.en);
 
     if (correct) {
       setRevealed(false);
@@ -407,11 +334,10 @@ export default function App() {
 
   return (
     <div
-      className="min-h-[calc(var(--app-vh)*100)] bg-gray-50 text-gray-900 px-3 pb-[calc(16px+env(safe-area-inset-bottom))]"
-      style={{ paddingTop: "var(--tg-top-pad)" }}
+      className="min-h-[100dvh] bg-gray-50 text-gray-900 px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-[calc(8px+env(safe-area-inset-top))]" // NEW: верхний отступ
     >
       <div className="max-w-full mx-auto">
-        <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur mb-3 pb-2">
+        <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur mb-3 pb-2 pt-1">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold leading-tight">Vocaboo</h1>
             <div className="flex gap-2 items-center">
@@ -421,18 +347,10 @@ export default function App() {
             </div>
           </div>
           <nav className="mt-2 flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
-            <TabButton active={tab === "train"} onClick={() => setTab("train")}>
-              Тренировка
-            </TabButton>
-            <TabButton active={tab === "add"} onClick={() => setTab("add")}>
-              Словарь
-            </TabButton>
-            <TabButton active={tab === "list"} onClick={() => setTab("list")}>
-              Список
-            </TabButton>
-            <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>
-              Настройки
-            </TabButton>
+            <TabButton active={tab === "train"} onClick={() => setTab("train")}>Тренировка</TabButton>
+            <TabButton active={tab === "add"} onClick={() => setTab("add")}>Словарь</TabButton>
+            <TabButton active={tab === "list"} onClick={() => setTab("list")}>Список</TabButton>
+            <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>Настройки</TabButton>
           </nav>
         </header>
 
@@ -448,9 +366,7 @@ export default function App() {
                 <>
                   <div className="w-full flex items-center justify-between mb-2">
                     <div className="text-xs text-gray-500">
-                      {Array.isArray(queue) && queue.length
-                        ? `Карточка ${currentIdx + 1} / ${queue.length}`
-                        : "—"}
+                      {Array.isArray(queue) && queue.length ? `Карточка ${currentIdx + 1} / ${queue.length}` : "—"}
                     </div>
                   </div>
 
@@ -469,46 +385,44 @@ export default function App() {
                     )}
                   </div>
 
-                  {Array.isArray(queue) && queue.length > 0 &&
-                    typeof queue[currentIdx] === "number" && words[queue[currentIdx]] && (
-                      <>
-                        <div className="text-center mb-2">
-                          <div className="text-xs text-gray-500 mb-1">Выберите перевод на английском:</div>
-                          <div className="text-xl font-semibold">{titleCase(words[queue[currentIdx]].ru)}</div>
-                        </div>
+                  {Array.isArray(queue) && queue.length > 0 && typeof queue[currentIdx] === "number" && words[queue[currentIdx]] && (
+                    <>
+                      <div className="text-center mb-2">
+                        <div className="text-xs text-gray-500 mb-1">Выберите перевод на английском:</div>
+                        <div className="text-xl font-semibold">{titleCase(words[queue[currentIdx]].ru)}</div>
+                      </div>
 
-                        {/* варианты — озвучка на pointerdown/touchstart, ответ на click */}
-                        <div className="grid grid-cols-1 gap-2 w-full max-w-[520px]">
-                          {choices.map((c) => {
-                            const correctEn = words[queue[currentIdx]].en;
-                            const correctChoice = normalize(c) === normalize(correctEn);
-                            return (
-                              <button
-                                key={c}
-                                onPointerDown={() => speak(c)}
-                                onTouchStart={() => speak(c)}
-                                onClick={() => pickChoice(c)}
-                                className={classNames(
-                                  "px-4 py-3 rounded-xl border text-base active:scale-[.99] text-left",
-                                  revealed
-                                    ? correctChoice
-                                      ? "bg-green-50 border-green-300"
-                                      : "bg-red-50 border-red-300"
-                                    : "bg-white hover:bg-gray-50"
-                                )}
-                                aria-label={`Choice: ${c}`}
-                              >
-                                {titleCase(c)}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      {/* варианты — озвучка на pointerdown, ответ на click */}
+                      <div className="grid grid-cols-1 gap-2 w-full max-w-[520px]">
+                        {choices.map((c) => {
+                          const correctEn = words[queue[currentIdx]].en;
+                          const correctChoice = normalize(c) === normalize(correctEn);
+                          return (
+                            <button
+                              key={c}
+                              onPointerDown={() => speakChoice(c)}          // NEW: озвучка на касание
+                              onClick={() => pickChoice(c)}
+                              className={classNames(
+                                "px-4 py-3 rounded-xl border text-base active:scale-[.99] text-left",
+                                revealed
+                                  ? correctChoice
+                                    ? "bg-green-50 border-green-300"
+                                    : "bg-red-50 border-red-300"
+                                  : "bg-white hover:bg-gray-50"
+                              )}
+                              aria-label={`Choice: ${c}`}
+                            >
+                              {titleCase(c)}
+                            </button>
+                          );
+                        })}
+                      </div>
 
-                        {revealed && (
-                          <RevealPanel correctAnswer={words[queue[currentIdx]].en} />
-                        )}
-                      </>
-                    )}
+                      {revealed && (
+                        <RevealPanel correctAnswer={words[queue[currentIdx]].en} />
+                      )}
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -521,22 +435,8 @@ export default function App() {
             <div className="bg-white rounded-2xl shadow p-3">
               <h2 className="font-semibold mb-2 text-base">Добавить слово одним нажатием</h2>
               <div className="flex flex-wrap gap-2 mb-2">
-                <DirectionButton
-                  label="RU→EN"
-                  active={direction === "ru2en"}
-                  onClick={() => {
-                    setDirection("ru2en");
-                    setSuggestions([]);
-                  }}
-                />
-                <DirectionButton
-                  label="EN→RU"
-                  active={direction === "en2ru"}
-                  onClick={() => {
-                    setDirection("en2ru");
-                    setSuggestions([]);
-                  }}
-                />
+                <DirectionButton label="RU→EN" active={direction === "ru2en"} onClick={() => { setDirection("ru2en"); setSuggestions([]); }} />
+                <DirectionButton label="EN→RU" active={direction === "en2ru"} onClick={() => { setDirection("en2ru"); setSuggestions([]); }} />
               </div>
               <label className="block text-xs mb-1">
                 {direction === "ru2en" ? "Исходное слово по-русски" : "Source word in English"}
@@ -551,26 +451,19 @@ export default function App() {
                 />
                 <button
                   onClick={handleSearch}
-                  className={classNames(
-                    "px-3 py-2 rounded-xl bg-blue-600 text-white text-sm",
-                    loading && "opacity-60"
-                  )}
+                  className={classNames("px-3 py-2 rounded-xl bg-blue-600 text-white text-sm", loading && "opacity-60")}
                   disabled={loading}
                 >
                   {loading ? "Ищу…" : "Подобрать"}
                 </button>
               </div>
               {suggestions.length > 0 && (
-                <div className="mb-1 text-xs text-gray-500">
-                  Нажмите на перевод, чтобы сразу сохранить его в словарь:
-                </div>
+                <div className="mb-1 text-xs text-gray-500">Нажмите на перевод, чтобы сразу сохранить его в словарь:</div>
               )}
               <div className="flex flex-wrap gap-2 no-scrollbar">
                 {suggestions.map((s) => (
                   <button
                     key={s}
-                    onPointerDown={() => speak(s)}
-                    onTouchStart={() => speak(s)}
                     onClick={() => handleSelectSuggestion(s)}
                     className="px-3 py-2 rounded-full border hover:bg-gray-50 active:scale-[.98] text-sm"
                   >
@@ -589,14 +482,13 @@ export default function App() {
                   {words.slice(0, 12).map((w) => (
                     <li key={w.id} className="flex items-center justify-between gap-2 border rounded-xl px-3 py-2">
                       <div>
+                        {/* NEW: отображение с заглавной буквы */}
                         <div className="font-medium text-sm">{titleCase(w.ru)}</div>
                         <div className="text-xs text-gray-600">{titleCase(w.en)}</div>
                         <div className="text-[10px] text-gray-400">{prettyDate(w.addedAt)}</div>
                       </div>
                       <div className="flex gap-2">
-                        <button className="text-red-600 text-xs hover:underline" onClick={() => removeWord(w.id)}>
-                          Удалить
-                        </button>
+                        <button className="text-red-600 text-xs hover:underline" onClick={() => removeWord(w.id)}>Удалить</button>
                       </div>
                     </li>
                   ))}
@@ -656,16 +548,7 @@ export default function App() {
                               }}
                             />
                           ) : (
-                            <>
-                                <span
-                                  onPointerDown={() => speak(w.en)}
-                                  onTouchStart={() => speak(w.en)}
-                                  className="cursor-pointer select-none"
-                                  title="Прослушать"
-                                >
-                                  {titleCase(w.en)} 🔊
-                                </span>
-                            </>
+                            <>{titleCase(w.en)}</>
                           )}
                         </td>
                         <td className="py-2 text-gray-600">{(w.stats?.correct || 0)}/{(w.stats?.seen || 0)} верных</td>
@@ -673,21 +556,13 @@ export default function App() {
                         <td className="py-2 text-right whitespace-nowrap">
                           {!isEditing ? (
                             <>
-                              <button className="text-blue-600 hover:underline mr-3" onClick={() => beginEdit(w)}>
-                                Редактировать
-                              </button>
-                              <button className="text-red-600 hover:underline" onClick={() => removeWord(w.id)}>
-                                Удалить
-                              </button>
+                              <button className="text-blue-600 hover:underline mr-3" onClick={() => beginEdit(w)}>Редактировать</button>
+                              <button className="text-red-600 hover:underline" onClick={() => removeWord(w.id)}>Удалить</button>
                             </>
                           ) : (
                             <>
-                              <button className="text-green-700 hover:underline mr-3" onClick={saveEdit}>
-                                Сохранить
-                              </button>
-                              <button className="text-gray-600 hover:underline" onClick={cancelEdit}>
-                                Отмена
-                              </button>
+                              <button className="text-green-700 hover:underline mr-3" onClick={saveEdit}>Сохранить</button>
+                              <button className="text-gray-600 hover:underline" onClick={cancelEdit}>Отмена</button>
                             </>
                           )}
                         </td>
