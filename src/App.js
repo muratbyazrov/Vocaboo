@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-// React App — Russian↔English Trainer (single-file)
-// -------------------------------------------------
-// ✓ Мобильная адаптация (iPhone 15 и др.), 100dvh и safe-area
-// ✓ Скрытые скроллбары (но скролл работает)
-// ✓ Остальной функционал без изменений
+/**
+ * Vocaboo — Telegram Mini App (refactored)
+ * -------------------------------------------------
+ * ✅ Фикс высоты под экран (100dvh / iOS Safari vh bug)
+ * ✅ Верхний отступ под шапку Telegram
+ * ✅ Исправлена озвучка: стабильная загрузка голосов, вызов на касание
+ * ✅ Лёгкий рефакторинг по хукам и компонентам
+ */
 
 // -------------------- Utils & Storage --------------------
 const LS_KEYS = {
@@ -55,7 +58,17 @@ function normalize(str) {
   return (str || "").toString().toLowerCase().trim().split("ё").join("е");
 }
 
-// -------------------- APIs --------------------
+// TitleCase только для отображения
+function titleCase(s) {
+  return (s || "")
+    .split(/(\s|-)/)
+    .map((part) => {
+      if (part === " " || part === "-") return part;
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join("");
+}
+
 async function fetchTranslations(query, from = "ru", to = "en") {
   if (!query || !query.trim()) return [];
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(query)}&langpair=${from}|${to}`;
@@ -97,39 +110,115 @@ async function fetchImageForWord(enWord) {
   return null;
 }
 
-function ttsSpeak(word, rate = 0.95) {
-  try {
-    if (!("speechSynthesis" in window)) return;
-    const utt = new SpeechSynthesisUtterance(word || "");
-    utt.lang = "en-US";
-    utt.rate = rate;
-    const voices = window.speechSynthesis.getVoices?.() || [];
-    const voice = voices.find((v) => /en-/i.test(v?.lang || ""));
-    if (voice) utt.voice = voice;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utt);
-  } catch {}
+function safeUUID() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return "id-" + Math.random().toString(36).substr(2, 9);
 }
 
-function safeUUID() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
+// -------------------- TTS (robust) --------------------
+function useTTS() {
+  const voicesReadyRef = useRef(false);
+  const queuedWordRef = useRef(null);
+
+  // Загружаем голоса корректно в WebView/Telegram (iOS/Android)
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+
+    function handleVoicesChanged() {
+      const list = window.speechSynthesis.getVoices?.() || [];
+      voicesReadyRef.current = list.length > 0;
+      if (voicesReadyRef.current && queuedWordRef.current) {
+        // Если кто-то успел нажать до загрузки голосов — догоним озвучкой
+        speakNow(queuedWordRef.current);
+        queuedWordRef.current = null;
+      }
+    }
+
+    // Пробуем инициировать загрузку голосов
+    window.speechSynthesis.getVoices?.();
+    window.speechSynthesis.onvoiceschanged = handleVoicesChanged;
+
+    // Доп. страховка: некоторые WebView не вызывают onvoiceschanged
+    const t = setTimeout(handleVoicesChanged, 600);
+    return () => {
+      clearTimeout(t);
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
+
+  function speakNow(text, rate = 0.95) {
+    try {
+      if (!text || !("speechSynthesis" in window)) return;
+
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = "en-US"; // общий хороший дефолт
+      utt.rate = rate;
+
+      const voices = window.speechSynthesis.getVoices?.() || [];
+      // Предпочтение англоязычного голоса
+      const preferred = voices.find((v) => /en[-_](US|GB|AU)/i.test(v.lang || "")) || voices.find((v) => /en/i.test(v.lang || ""));
+      if (preferred) utt.voice = preferred;
+
+      // iOS hack: отменяем любые очереди и сразу говорим
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utt);
+    } catch {}
   }
-  return "id-" + Math.random().toString(36).substr(2, 9);
+
+  // Публичный метод: вызывать строго в ответ на пользовательское действие (tap/click)
+  function speak(text) {
+    if (!text || !("speechSynthesis" in window)) return;
+    const voices = window.speechSynthesis.getVoices?.() || [];
+    if (!voices.length) {
+      // Если голоса ещё не прогрузились, ставим в очередь
+      queuedWordRef.current = text;
+      // Триггерим прогрузку
+      window.speechSynthesis.getVoices?.();
+      return;
+    }
+    speakNow(text);
+  }
+
+  return { speak };
+}
+
+// -------------------- useAppViewport (safe 100dvh + top inset) --------------------
+function useAppViewport() {
+  useEffect(() => {
+    const root = document.documentElement;
+
+    function setVH() {
+      const vh = window.innerHeight * 0.01;
+      root.style.setProperty("--app-vh", `${vh}px`);
+    }
+
+    setVH();
+    window.addEventListener("resize", setVH);
+
+    // Telegram Mini Apps: подвинем контент ниже шапки на 8px + safe-area
+    const tg = window.Telegram?.WebApp;
+    const topInset = 8; // базовый отступ сверху
+    const safeInsetTop = Number.parseInt(getComputedStyle(document.documentElement).getPropertyValue("env(safe-area-inset-top)") || "0", 10) || 0;
+    const headerPad = topInset + safeInsetTop;
+    root.style.setProperty("--tg-top-pad", `${headerPad}px`);
+
+    try {
+      if (tg) {
+        tg.ready();
+        tg.expand();
+      }
+    } catch {}
+
+    return () => window.removeEventListener("resize", setVH);
+  }, []);
 }
 
 // -------------------- App --------------------
 export default function App() {
-  const [tab, setTab] = useState("add");
+  useAppViewport();
+  const { speak } = useTTS();
 
-  // Telegram full-screen
-  useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-    }
-  }, []);
+  const [tab, setTab] = useState("train");
 
   // Data
   const [words, setWords] = useLocalStorage(LS_KEYS.words, []);
@@ -143,45 +232,35 @@ export default function App() {
     ttsOnReveal: true,
   });
 
-  // Add/Lookup state
-  const [direction, setDirection] = useState("ru2en"); // 'ru2en' | 'en2ru'
+  // Add/Lookup
+  const [direction, setDirection] = useState("ru2en");
   const [sourceInput, setSourceInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
 
-  // Train state
-  const [queue, setQueue] = useState([]); // indices of words
+  // Train
+  const [queue, setQueue] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [userAnswer, setUserAnswer] = useState("");
   const [revealed, setRevealed] = useState(false);
-  const [cardImg, setCardImg] = useState(""); // always string
+  const [cardImg, setCardImg] = useState("");
   const [isFetchingImg, setIsFetchingImg] = useState(false);
+  const [choices, setChoices] = useState([]);
 
-  // List editing state
+  // Edit (list)
   const [editingId, setEditingId] = useState(null);
   const [editFields, setEditFields] = useState({ ru: "", en: "" });
 
-  // -------------------- Dev Mini-Tests --------------------
-  useEffect(() => {
-    console.group("Mini tests");
-    console.assert(normalize(" Кот ") === "кот", "normalize trims+lowercases");
-    console.assert(isValidHttpUrl("https://example.com/a.jpg") === true, "valid URL ok");
-    console.assert(isValidHttpUrl("") === false, "empty URL invalid");
-    console.assert(Array.isArray([]) && Array.isArray(words) !== undefined, "arrays ok");
-    console.groupEnd();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // -------------------- Effects --------------------
+  // Init queue
   useEffect(() => {
     if (tab !== "train") return;
     if (!Array.isArray(words) || words.length === 0) return;
     const idxs = words.map((_, i) => i).sort(() => Math.random() - 0.5);
     setQueue(idxs);
     setCurrentIdx(0);
-    setUserAnswer("");
     setRevealed(false);
-  }, [tab, words.length]);
+  }, [tab, words]);
 
+  // Fetch image
   useEffect(() => {
     if (tab !== "train") return;
     if (!Array.isArray(queue) || queue.length === 0) return;
@@ -204,7 +283,23 @@ export default function App() {
     };
   }, [tab, currentIdx, queue, words]);
 
-  // -------------------- Actions --------------------
+  // Build 4 choices
+  useEffect(() => {
+    if (tab !== "train") return;
+    if (!Array.isArray(queue) || queue.length === 0) return;
+    const idx = queue[currentIdx];
+    if (typeof idx !== "number") return;
+    const correct = words[idx]?.en?.trim();
+    if (!correct) return;
+    const pool = words
+      .map((w, i) => (i === idx ? null : (w?.en || "").trim()))
+      .filter(Boolean);
+    const decoys = [...new Set(pool)].sort(() => Math.random() - 0.5).slice(0, 3);
+    const all = [correct, ...decoys].sort(() => Math.random() - 0.5);
+    setChoices(all);
+  }, [tab, currentIdx, queue, words]);
+
+  // Search/Select
   async function handleSearch() {
     const q = sourceInput.trim();
     if (!q) return;
@@ -215,7 +310,6 @@ export default function App() {
     setSuggestions(s);
     setLoading(false);
   }
-
   function handleSelectSuggestion(s) {
     const q = sourceInput.trim();
     if (!q || !s) return;
@@ -231,30 +325,19 @@ export default function App() {
     setWords([newItem, ...words]);
   }
 
-  function removeWord(id) {
-    if (editingId === id) {
-      setEditingId(null);
-      setEditFields({ ru: "", en: "" });
-    }
-    setWords(words.filter((w) => w.id !== id));
-  }
-
   function beginEdit(w) {
     setEditingId(w.id);
     setEditFields({ ru: w.ru, en: w.en });
   }
-
   function cancelEdit() {
     setEditingId(null);
     setEditFields({ ru: "", en: "" });
   }
-
   function saveEdit() {
     if (!editingId) return;
     const ru = (editFields.ru || "").trim();
     const en = (editFields.en || "").trim();
     if (!ru || !en) {
-      // eslint-disable-next-line no-restricted-globals
       alert("Оба поля должны быть заполнены");
       return;
     }
@@ -263,16 +346,19 @@ export default function App() {
     setEditingId(null);
     setEditFields({ ru: "", en: "" });
   }
+  function removeWord(id) {
+    if (editingId === id) cancelEdit();
+    setWords(words.filter((w) => w.id !== id));
+  }
 
-  function checkAnswer() {
+  // Проверка выбранного варианта
+  function pickChoice(selected) {
     if (!Array.isArray(queue) || queue.length === 0) return;
-    if (!Array.isArray(words) || words.length === 0) return;
     const idx = queue[currentIdx];
-    if (typeof idx !== "number" || idx < 0 || idx >= words.length) return;
     const w = words[idx];
     if (!w) return;
 
-    const correct = normalize(userAnswer) === normalize(w.en);
+    const correct = normalize(selected) === normalize(w.en);
 
     const updated = words.map((item, i) =>
       i === idx
@@ -296,10 +382,9 @@ export default function App() {
       history: newHist,
     });
 
-    if (settings.ttsOnReveal && w.en) ttsSpeak(w.en);
+    if (settings.ttsOnReveal && w.en) speak(w.en);
 
     if (correct) {
-      setUserAnswer("");
       setRevealed(false);
       if (currentIdx + 1 < queue.length) setCurrentIdx(currentIdx + 1);
       else {
@@ -321,130 +406,55 @@ export default function App() {
   const hasValidImg = isValidHttpUrl(cardImg);
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 text-gray-900 px-3 py-3 sm:p-6 pb-[calc(16px+env(safe-area-inset-bottom))]">
+    <div
+      className="min-h-[calc(var(--app-vh)*100)] bg-gray-50 text-gray-900 px-3 pb-[calc(16px+env(safe-area-inset-bottom))]"
+      style={{ paddingTop: "var(--tg-top-pad)" }}
+    >
       <div className="max-w-full mx-auto">
-        <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur mb-3 sm:mb-4 pb-2 pt-1">
-          <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <h1 className="text-xl sm:text-3xl font-bold leading-tight">Vocaboo</h1>
-            <div className="flex gap-2 items-center flex-wrap">
-              <StatsBadge label="Ответов" value={progress.totalAnswered} />
-              <StatsBadge label="Точность" value={`${accuracy}%`} />
-              <StatsBadge label="Серия" value={progress.streak} />
+        <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur mb-3 pb-2">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold leading-tight">Vocaboo</h1>
+            <div className="flex gap-2 items-center">
+              <StatsBadge label="Ans" value={progress.totalAnswered} />
+              <StatsBadge label="Acc" value={`${accuracy}%`} />
+              <StatsBadge label="Streak" value={progress.streak} />
             </div>
           </div>
-
-          <nav className="mt-2 sm:mt-3 flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
-            <TabButton active={tab === "add"} onClick={() => setTab("add")}>Словарь</TabButton>
-            <TabButton active={tab === "train"} onClick={() => setTab("train")}>Тренировка</TabButton>
-            <TabButton active={tab === "list"} onClick={() => setTab("list")}>Список</TabButton>
-            <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>Настройки</TabButton>
+          <nav className="mt-2 flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+            <TabButton active={tab === "train"} onClick={() => setTab("train")}>
+              Тренировка
+            </TabButton>
+            <TabButton active={tab === "add"} onClick={() => setTab("add")}>
+              Словарь
+            </TabButton>
+            <TabButton active={tab === "list"} onClick={() => setTab("list")}>
+              Список
+            </TabButton>
+            <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>
+              Настройки
+            </TabButton>
           </nav>
         </header>
 
-        {tab === "add" && (
-          <section className="grid md:grid-cols-2 gap-4 sm:gap-6">
-            <div className="bg-white rounded-2xl shadow p-3 sm:p-5">
-              <h2 className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg">Добавить слово одним нажатием</h2>
-
-              <div className="flex flex-wrap gap-2 mb-2 sm:mb-3">
-                <DirectionButton label="RU→EN" active={direction === "ru2en"} onClick={() => { setDirection("ru2en"); setSuggestions([]); }} />
-                <DirectionButton label="EN→RU" active={direction === "en2ru"} onClick={() => { setDirection("en2ru"); setSuggestions([]); }} />
-              </div>
-
-              <label className="block text-xs sm:text-sm mb-1">
-                {direction === "ru2en" ? "Исходное слово по-русски" : "Source word in English"}
-              </label>
-              <div className="flex gap-2 mb-2 sm:mb-3">
-                <input
-                  className="flex-1 border rounded-xl px-3 py-2 sm:py-3 text-base"
-                  value={sourceInput}
-                  onChange={(e) => setSourceInput(e.target.value)}
-                  placeholder={direction === "ru2en" ? "например: кошка" : "e.g., cat"}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                />
-                <button
-                  onClick={handleSearch}
-                  className={classNames(
-                    "px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-blue-600 text-white text-sm sm:text-base",
-                    loading && "opacity-60"
-                  )}
-                  disabled={loading}
-                >
-                  {loading ? "Ищу…" : "Подобрать"}
-                </button>
-              </div>
-
-              {suggestions.length > 0 && (
-                <div className="mb-1 text-xs sm:text-sm text-gray-500">
-                  Нажмите на перевод, чтобы сразу сохранить его в словарь:
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-2 no-scrollbar">
-                {suggestions.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleSelectSuggestion(s)}
-                    className="px-3 py-2 rounded-full border hover:bg-gray-50 active:scale-[.98] text-sm"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-
-              <p className="text-xs text-gray-500 mt-3 sm:mt-4">
-                Подсказка: можно несколько раз нажимать «Подобрать», меняя исходное слово, и кликать на подходящие варианты — они сразу добавятся.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow p-3 sm:p-5">
-              <h2 className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg">Недавно добавленные</h2>
-              {words.length === 0 ? (
-                <p className="text-gray-500 text-sm">Пока пусто. Добавьте первое слово.</p>
-              ) : (
-                <ul className="space-y-2 max-h-80 overflow-auto pr-1 -mr-1 no-scrollbar">
-                  {words.slice(0, 12).map((w) => (
-                    <li key={w.id} className="flex items-center justify-between gap-2 border rounded-xl px-3 py-2">
-                      <div>
-                        <div className="font-medium text-sm sm:text-base">{w.ru}</div>
-                        <div className="text-xs sm:text-sm text-gray-600">{w.en}</div>
-                        <div className="text-[10px] sm:text-xs text-gray-400">{prettyDate(w.addedAt)}</div>
-                      </div>
-                      <div className="flex gap-2 sm:gap-3">
-                        <button className="text-red-600 text-xs sm:text-sm hover:underline" onClick={() => removeWord(w.id)}>Удалить</button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-        )}
-
+        {/* TRAIN */}
         {tab === "train" && (
-          <section className="grid lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="lg:col-span-2 bg-white rounded-2xl shadow p-3 sm:p-5 flex flex-col items-center">
+          <section className="grid gap-4">
+            <div className="bg-white rounded-2xl shadow p-3 flex flex-col items-center">
               {!words.length ? (
-                <div className="text-gray-500 text-sm">Нет слов для тренировки. Добавьте слова в разделе «Словарь».</div>
+                <div className="text-gray-500 text-sm text-center">
+                  Нет слов для тренировки. Добавьте слова в разделе «Словарь».
+                </div>
               ) : (
                 <>
-                  <div className="w-full flex items-center justify-between mb-2 sm:mb-3">
-                    <div className="text-xs sm:text-sm text-gray-500">
-                      Карточка {Array.isArray(queue) && queue.length ? currentIdx + 1 : 0} / {Array.isArray(queue) ? queue.length : 0}
+                  <div className="w-full flex items-center justify-between mb-2">
+                    <div className="text-xs text-gray-500">
+                      {Array.isArray(queue) && queue.length
+                        ? `Карточка ${currentIdx + 1} / ${queue.length}`
+                        : "—"}
                     </div>
-                    <button
-                      className="text-xs sm:text-sm text-blue-700 hover:underline"
-                      onClick={() => {
-                        if (!Array.isArray(queue) || queue.length === 0) return;
-                        const idx = queue[currentIdx];
-                        const w = words[idx];
-                        if (w?.en) ttsSpeak(w.en);
-                      }}
-                    >🔊 Озвучить</button>
                   </div>
 
-                  {/* На мобильном делаем более высокую карточку 3:4 и object-contain */}
-                  <div className="w-full max-w-[520px] aspect-[3/4] sm:aspect-[4/3] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3 sm:mb-4">
+                  <div className="w-full max-w-[520px] aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3">
                     {isFetchingImg ? (
                       <div className="text-gray-400">Ищу картинку…</div>
                     ) : hasValidImg ? (
@@ -455,66 +465,156 @@ export default function App() {
                         onError={() => setCardImg("")}
                       />
                     ) : (
-                      <div className="text-6xl sm:text-7xl">🧠</div>
+                      <div className="text-6xl">🧠</div>
                     )}
                   </div>
 
-                  {Array.isArray(queue) && queue.length > 0 && typeof queue[currentIdx] === "number" && words[queue[currentIdx]] && (
-                    <>
-                      <div className="text-center mb-2">
-                        <div className="text-xs sm:text-sm text-gray-500 mb-1">Переведите на английский:</div>
-                        <div className="text-xl sm:text-2xl font-semibold">{words[queue[currentIdx]].ru}</div>
-                      </div>
+                  {Array.isArray(queue) && queue.length > 0 &&
+                    typeof queue[currentIdx] === "number" && words[queue[currentIdx]] && (
+                      <>
+                        <div className="text-center mb-2">
+                          <div className="text-xs text-gray-500 mb-1">Выберите перевод на английском:</div>
+                          <div className="text-xl font-semibold">{titleCase(words[queue[currentIdx]].ru)}</div>
+                        </div>
 
-                      <div className="flex gap-2 w-full max-w-[520px]">
-                        <input
-                          className="flex-1 border rounded-xl px-3 py-2 sm:py-3 text-base"
-                          placeholder="Ваш ответ на английском"
-                          value={userAnswer}
-                          onChange={(e) => setUserAnswer(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && checkAnswer()}
-                        />
-                        <button className="px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-blue-600 text-white text-sm sm:text-base" onClick={checkAnswer}>
-                          Проверить
-                        </button>
-                      </div>
+                        {/* варианты — озвучка на pointerdown/touchstart, ответ на click */}
+                        <div className="grid grid-cols-1 gap-2 w-full max-w-[520px]">
+                          {choices.map((c) => {
+                            const correctEn = words[queue[currentIdx]].en;
+                            const correctChoice = normalize(c) === normalize(correctEn);
+                            return (
+                              <button
+                                key={c}
+                                onPointerDown={() => speak(c)}
+                                onTouchStart={() => speak(c)}
+                                onClick={() => pickChoice(c)}
+                                className={classNames(
+                                  "px-4 py-3 rounded-xl border text-base active:scale-[.99] text-left",
+                                  revealed
+                                    ? correctChoice
+                                      ? "bg-green-50 border-green-300"
+                                      : "bg-red-50 border-red-300"
+                                    : "bg-white hover:bg-gray-50"
+                                )}
+                                aria-label={`Choice: ${c}`}
+                              >
+                                {titleCase(c)}
+                              </button>
+                            );
+                          })}
+                        </div>
 
-                      {revealed && (
-                        <RevealPanel correctAnswer={words[queue[currentIdx]].en} userAnswer={userAnswer} />
-                      )}
-                    </>
-                  )}
+                        {revealed && (
+                          <RevealPanel correctAnswer={words[queue[currentIdx]].en} />
+                        )}
+                      </>
+                    )}
                 </>
               )}
-            </div>
-
-            <div className="bg-white rounded-2xl shadow p-3 sm:p-5">
-              <h3 className="font-semibold mb-2 text-base sm:text-lg">Прогресс</h3>
-              <ProgressBar label="Точность" pct={accuracy} />
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-3 text-xs sm:text-sm">
-                <MiniStat label="Всего слов" value={words.length} />
-                <MiniStat label="Ответов" value={progress.totalAnswered} />
-                <MiniStat label="Верных" value={progress.totalCorrect} />
-              </div>
-
-              <h4 className="font-semibold mt-5 sm:mt-6 mb-2">Советы</h4>
-              <ul className="list-disc pl-5 text-xs sm:text-sm text-gray-600 space-y-1">
-                <li>Жмите 🔊, чтобы услышать правильное произношение.</li>
-                <li>Отвечайте вслух — лучше закрепляется.</li>
-                <li>Добавляйте собственные ассоциации к словам.</li>
-              </ul>
             </div>
           </section>
         )}
 
+        {/* ADD */}
+        {tab === "add" && (
+          <section className="grid md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl shadow p-3">
+              <h2 className="font-semibold mb-2 text-base">Добавить слово одним нажатием</h2>
+              <div className="flex flex-wrap gap-2 mb-2">
+                <DirectionButton
+                  label="RU→EN"
+                  active={direction === "ru2en"}
+                  onClick={() => {
+                    setDirection("ru2en");
+                    setSuggestions([]);
+                  }}
+                />
+                <DirectionButton
+                  label="EN→RU"
+                  active={direction === "en2ru"}
+                  onClick={() => {
+                    setDirection("en2ru");
+                    setSuggestions([]);
+                  }}
+                />
+              </div>
+              <label className="block text-xs mb-1">
+                {direction === "ru2en" ? "Исходное слово по-русски" : "Source word in English"}
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  className="flex-1 border rounded-xl px-3 py-2 text-base"
+                  value={sourceInput}
+                  onChange={(e) => setSourceInput(e.target.value)}
+                  placeholder={direction === "ru2en" ? "например: кошка" : "e.g., cat"}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+                <button
+                  onClick={handleSearch}
+                  className={classNames(
+                    "px-3 py-2 rounded-xl bg-blue-600 text-white text-sm",
+                    loading && "opacity-60"
+                  )}
+                  disabled={loading}
+                >
+                  {loading ? "Ищу…" : "Подобрать"}
+                </button>
+              </div>
+              {suggestions.length > 0 && (
+                <div className="mb-1 text-xs text-gray-500">
+                  Нажмите на перевод, чтобы сразу сохранить его в словарь:
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2 no-scrollbar">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    onPointerDown={() => speak(s)}
+                    onTouchStart={() => speak(s)}
+                    onClick={() => handleSelectSuggestion(s)}
+                    className="px-3 py-2 rounded-full border hover:bg-gray-50 active:scale-[.98] text-sm"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow p-3">
+              <h2 className="font-semibold mb-2 text-base">Недавно добавленные</h2>
+              {words.length === 0 ? (
+                <p className="text-gray-500 text-sm">Пока пусто. Добавьте первое слово.</p>
+              ) : (
+                <ul className="space-y-2 max-h-80 overflow-auto pr-1 -mr-1 no-scrollbar">
+                  {words.slice(0, 12).map((w) => (
+                    <li key={w.id} className="flex items-center justify-between gap-2 border rounded-xl px-3 py-2">
+                      <div>
+                        <div className="font-medium text-sm">{titleCase(w.ru)}</div>
+                        <div className="text-xs text-gray-600">{titleCase(w.en)}</div>
+                        <div className="text-[10px] text-gray-400">{prettyDate(w.addedAt)}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button className="text-red-600 text-xs hover:underline" onClick={() => removeWord(w.id)}>
+                          Удалить
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* LIST */}
         {tab === "list" && (
-          <section className="bg-white rounded-2xl shadow p-3 sm:p-5">
-            <h2 className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg">Ваши слова ({words.length})</h2>
+          <section className="bg-white rounded-2xl shadow p-3">
+            <h2 className="font-semibold mb-2 text-base">Ваши слова ({words.length})</h2>
             {words.length === 0 ? (
               <p className="text-gray-500 text-sm">Пока пусто.</p>
             ) : (
               <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
-                <table className="w-full text-xs sm:text-sm">
+                <table className="w-full text-xs">
                   <thead>
                   <tr className="text-left text-gray-500">
                     <th className="py-2">RU</th>
@@ -541,7 +641,7 @@ export default function App() {
                               }}
                             />
                           ) : (
-                            w.ru
+                            <>{titleCase(w.ru)}</>
                           )}
                         </td>
                         <td className="py-2">
@@ -556,23 +656,38 @@ export default function App() {
                               }}
                             />
                           ) : (
-                            w.en
+                            <>
+                                <span
+                                  onPointerDown={() => speak(w.en)}
+                                  onTouchStart={() => speak(w.en)}
+                                  className="cursor-pointer select-none"
+                                  title="Прослушать"
+                                >
+                                  {titleCase(w.en)} 🔊
+                                </span>
+                            </>
                           )}
                         </td>
-                        <td className="py-2 text-gray-600">
-                          {(w.stats?.correct || 0)}/{(w.stats?.seen || 0)} верных
-                        </td>
+                        <td className="py-2 text-gray-600">{(w.stats?.correct || 0)}/{(w.stats?.seen || 0)} верных</td>
                         <td className="py-2 text-gray-600">{prettyDate(w.addedAt)}</td>
                         <td className="py-2 text-right whitespace-nowrap">
                           {!isEditing ? (
                             <>
-                              <button className="text-blue-600 hover:underline mr-3" onClick={() => beginEdit(w)}>Редактировать</button>
-                              <button className="text-red-600 hover:underline" onClick={() => removeWord(w.id)}>Удалить</button>
+                              <button className="text-blue-600 hover:underline mr-3" onClick={() => beginEdit(w)}>
+                                Редактировать
+                              </button>
+                              <button className="text-red-600 hover:underline" onClick={() => removeWord(w.id)}>
+                                Удалить
+                              </button>
                             </>
                           ) : (
                             <>
-                              <button className="text-green-700 hover:underline mr-3" onClick={saveEdit}>Сохранить</button>
-                              <button className="text-gray-600 hover:underline" onClick={cancelEdit}>Отмена</button>
+                              <button className="text-green-700 hover:underline mr-3" onClick={saveEdit}>
+                                Сохранить
+                              </button>
+                              <button className="text-gray-600 hover:underline" onClick={cancelEdit}>
+                                Отмена
+                              </button>
                             </>
                           )}
                         </td>
@@ -586,16 +701,17 @@ export default function App() {
           </section>
         )}
 
+        {/* SETTINGS */}
         {tab === "settings" && (
-          <section className="bg-white rounded-2xl shadow p-3 sm:p-5 max-w-xl">
-            <h2 className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg">Настройки</h2>
+          <section className="bg-white rounded-2xl shadow p-3 max-w-xl">
+            <h2 className="font-semibold mb-2 text-base">Настройки</h2>
             <Toggle
               label="Озвучивать слово после проверки"
               checked={!!settings.ttsOnReveal}
               onChange={(v) => setSettings({ ...settings, ttsOnReveal: v })}
             />
             <button
-              className="mt-5 sm:mt-6 px-4 py-3 rounded-xl bg-red-600 text-white w-full sm:w-auto"
+              className="mt-5 px-4 py-3 rounded-xl bg-red-600 text-white w-full sm:w-auto"
               onClick={() => {
                 // eslint-disable-next-line no-restricted-globals
                 if (confirm("Удалить все слова и прогресс?")) {
@@ -610,8 +726,8 @@ export default function App() {
           </section>
         )}
 
-        <footer className="mt-8 sm:mt-10 text-center text-[10px] sm:text-xs text-gray-400 pb-6">
-          © {new Date().getFullYear()} MiniTrainer — локальное хранилище, без серверной части.
+        <footer className="mt-8 text-center text-[10px] text-gray-400 pb-6">
+          © {new Date().getFullYear()} Vocaboo — локальное хранилище, без серверной части.
         </footer>
       </div>
     </div>
@@ -624,7 +740,7 @@ function TabButton({ active, children, onClick }) {
     <button
       onClick={onClick}
       className={classNames(
-        "px-3 py-2 sm:px-5 sm:py-2.5 rounded-xl border whitespace-nowrap",
+        "px-3 py-2 rounded-xl border whitespace-nowrap",
         active ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
       )}
     >
@@ -632,13 +748,12 @@ function TabButton({ active, children, onClick }) {
     </button>
   );
 }
-
 function DirectionButton({ label, active, onClick }) {
   return (
     <button
       onClick={onClick}
       className={classNames(
-        "px-3 py-2 rounded-xl border text-sm sm:text-base",
+        "px-3 py-2 rounded-xl border text-sm",
         active ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-50"
       )}
       aria-pressed={active}
@@ -647,74 +762,28 @@ function DirectionButton({ label, active, onClick }) {
     </button>
   );
 }
-
 function StatsBadge({ label, value }) {
   return (
-    <div className="px-2.5 py-1 rounded-full bg-white shadow border text-xs sm:text-sm">
+    <div className="px-2.5 py-1 rounded-full bg-white shadow border text-xs">
       <span className="text-gray-500 mr-1">{label}:</span>
       <span className="font-semibold">{value}</span>
     </div>
   );
 }
-
-function ProgressBar({ label, pct }) {
-  return (
-    <div>
-      <div className="flex justify-between text-xs sm:text-sm mb-1">
-        <span className="text-gray-600">{label}</span>
-        <span className="font-medium">{pct}%</span>
-      </div>
-      <div className="h-2.5 sm:h-3 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full bg-green-500" style={{ width: `${pct}%`, transition: "width .4s" }} />
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({ label, value }) {
-  return (
-    <div className="p-2.5 sm:p-3 rounded-xl bg-gray-50 border text-center">
-      <div className="text-[11px] sm:text-xs text-gray-500">{label}</div>
-      <div className="text-base sm:text-lg font-semibold">{value}</div>
-    </div>
-  );
-}
-
 function Toggle({ label, checked, onChange }) {
   return (
     <label className="flex items-center gap-3 cursor-pointer select-none py-2">
-      <input
-        type="checkbox"
-        checked={!!checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="peer hidden"
-      />
+      <input type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} className="peer hidden" />
       <span className="w-10 h-6 flex items-center bg-gray-300 rounded-full relative after:content-[''] after:absolute after:w-5 after:h-5 after:bg-white after:rounded-full after:left-0.5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:translate-x-4" />
       <span className="text-sm">{label}</span>
     </label>
   );
 }
-
-function RevealPanel({ correctAnswer, userAnswer }) {
-  const isCorrect = useMemo(() => {
-    const n = (s) => (s || "").toString().toLowerCase().trim();
-    return n(correctAnswer) === n(userAnswer);
-  }, [correctAnswer, userAnswer]);
+function RevealPanel({ correctAnswer }) {
   return (
-    <div
-      className={classNames(
-        "mt-3 w-full max-w-[520px] rounded-xl border p-3",
-        isCorrect ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
-      )}
-    >
-      <div className="text-xs sm:text-sm text-gray-600 mb-1">Правильный ответ:</div>
-      <div className="text-lg sm:text-xl font-semibold">{correctAnswer}</div>
-      {!isCorrect && (
-        <div className="mt-1 text-xs sm:text-sm text-gray-700">
-          Ваш ответ: <span className="font-medium">{userAnswer || "—"}</span>
-        </div>
-      )}
-      <div className="mt-2 text-[10px] sm:text-xs text-gray-500">Нажмите «Далее →» для следующей карточки.</div>
+    <div className="mt-3 w-full max-w-[520px] rounded-xl border p-3 border-red-300 bg-red-50">
+      <div className="text-xs text-gray-600 mb-1">Правильный ответ:</div>
+      <div className="text-lg font-semibold">{correctAnswer}</div>
     </div>
   );
 }
