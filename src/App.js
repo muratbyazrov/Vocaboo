@@ -353,13 +353,12 @@ export default function App() {
   const hasValidImg = isValidHttpUrl(cardImg);
 
   return (
-    // Корневой фикс-слой: весь экран, без скролла страницы
     <div
-      className="fixed inset-x-0 bg-gray-50 text-gray-900 select-none"
+      className="fixed inset-0 bg-gray-50 text-gray-900 select-none flex flex-col"
       style={{height: 'var(--app-vh)'}}
     >
-      {/* Фиксированный header */}
-      <header className="fixed top-3 left-0 right-0 z-10 bg-gray-50/90 backdrop-blur border-b">
+      {/* Header теперь sticky и обычный flex-элемент */}
+      <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur border-b">
         <div className="px-3 pt-[calc(env(safe-area-inset-top))] pb-2 max-w-full mx-auto">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold leading-tight">Vocaboo</h1>
@@ -378,11 +377,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* Единственная зона, где скролл допустим */}
       <main
         className="
-          absolute inset-0
-          pt-[calc(100px+env(safe-area-inset-top))]
+          flex-1
           pb-[calc(32px+env(safe-area-inset-bottom))]
           px-3
           overflow-auto
