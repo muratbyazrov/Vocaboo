@@ -46,3 +46,25 @@ body { margin: 0; padding-bottom: env(safe-area-inset-bottom); background: #f9fa
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
+
+html, body, #root {
+  height: 100%;
+}
+body {
+  overflow: hidden;               /* запрещаем скролл страницы */
+overscroll-behavior: none;      /* убираем резинку */
+touch-action: pan-x pan-y;      /* адекватные жесты */
+}
+
+/* iOS-фикс высоты */
+@supports (-webkit-touch-callout: none) {
+  html, body {
+    height: -webkit-fill-available;
+  }
+}
+
+/* скрыть скроллбар, если нужно */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+
