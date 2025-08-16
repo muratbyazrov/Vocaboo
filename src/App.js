@@ -551,37 +551,27 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+                {/* Экспорт / Импорт */}
+                <div className="mt-6 flex gap-3">
+                  <button
+                    className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm"
+                    onClick={() => handleExportWords(words)}
+                  >
+                    Экспорт слов
+                  </button>
+                  <label className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer">
+                    Импорт слов
+                    <input
+                      type="file"
+                      accept="application/json"
+                      style={{ display: 'none' }}
+                      onChange={handleImportWordsFactory(words, setWords)}
+                    />
+                  </label>
+                </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1 min-h-0">
-                <h2 className="font-semibold mb-2 text-base">Недавно добавленные</h2>
-                {words.length === 0 ? (
-                  <p className="text-gray-500 text-sm">Пока пусто. Добавьте первое слово.</p>
-                ) : (
-                  <ul className="space-y-2 max-h-80 overflow-auto pr-1 -mr-1 no-scrollbar flex-1 min-h-0">
-                    {words.slice(0, 12).map((w) => (
-                      <li
-                        key={w.id}
-                        className="flex items-center justify-between gap-2 border rounded-xl px-3 py-2"
-                      >
-                        <div>
-                          <div className="font-medium text-sm">{titleCase(w.ru)}</div>
-                          <div className="text-xs text-gray-600">{titleCase(w.en)}</div>
-                          <div className="text-[10px] text-gray-400">{prettyDate(w.addedAt)}</div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            className="text-red-600 text-xs hover:underline"
-                            onClick={() => removeWord(w.id)}
-                          >
-                            Удалить
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              {/* Удалён блок "Недавно добавленные" */}
             </section>
           )}
 
@@ -780,4 +770,50 @@ function RevealPanel({correctAnswer}) {
       <div className="text-lg font-semibold">{correctAnswer}</div>
     </div>
   );
+}
+
+function handleExportWords(words) {
+  try {
+    const data = JSON.stringify(words, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vocaboo_words.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 0);
+  } catch (e) {
+    alert('Ошибка экспорта');
+  }
+}
+
+function handleImportWordsFactory(words, setWords) {
+  return function handleImportWords(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (!Array.isArray(imported)) throw new Error('Некорректный формат файла');
+        // Добавляем только уникальные слова по id
+        const existingIds = new Set(words.map(w => w.id));
+        const merged = [
+          ...imported.filter(w => w && w.id && !existingIds.has(w.id)),
+          ...words
+        ];
+        setWords(merged);
+        alert(`Импортировано слов: ${imported.length}`);
+      } catch (err) {
+        alert('Ошибка импорта: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    // сбрасываем value, чтобы повторно можно было выбрать тот же файл
+    e.target.value = '';
+  }
 }
