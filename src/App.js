@@ -636,9 +636,9 @@ export default function App() {
                           {/* <td className="py-2 text-gray-600">{prettyDate(w.addedAt)}</td> */}
                           <td className="py-2 text-right whitespace-nowrap">
                             {!isEditing ? (
-                              <>
+                              <div className="flex items-center justify-end gap-5">
                                 <button
-                                  className="text-blue-600 hover:text-blue-800 mr-3"
+                                  className="text-blue-600 hover:text-blue-800"
                                   title="Редактировать"
                                   onClick={() => beginEdit(w)}
                                 >
@@ -657,7 +657,7 @@ export default function App() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M10 3h4a1 1 0 011 1v2H9V4a1 1 0 011-1z" />
                                   </svg>
                                 </button>
-                              </>
+                              </div>
                             ) : (
                               <>
                                 <button
