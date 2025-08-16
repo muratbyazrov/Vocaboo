@@ -257,7 +257,6 @@ export default function App() {
       id: safeUUID(),
       ru,
       en,
-      addedAt: Date.now(),
       stats: {seen: 0, correct: 0, wrong: 0},
     };
     setWords([newItem, ...words]);
@@ -377,7 +376,6 @@ export default function App() {
             <TabButton active={tab === 'train'} onClick={() => setTab('train')}>Тренировка</TabButton>
             <TabButton active={tab === 'add'} onClick={() => setTab('add')}>Словарь</TabButton>
             <TabButton active={tab === 'list'} onClick={() => setTab('list')}>Список</TabButton>
-            <TabButton active={tab === 'settings'} onClick={() => setTab('settings')}>Настройки</TabButton>
           </nav>
         </div>
       </header>
@@ -589,7 +587,7 @@ export default function App() {
                       <th className="py-2">RU</th>
                       <th className="py-2">EN</th>
                       <th className="py-2">Статистика</th>
-                      <th className="py-2">Добавлено</th>
+                      {/* <th className="py-2">Добавлено</th> */}
                       <th className="py-2 text-right">Действия</th>
                     </tr>
                     </thead>
@@ -635,21 +633,29 @@ export default function App() {
                           <td className="py-2 text-gray-600">
                             {(w.stats?.correct || 0)}/{(w.stats?.seen || 0)} верных
                           </td>
-                          <td className="py-2 text-gray-600">{prettyDate(w.addedAt)}</td>
+                          {/* <td className="py-2 text-gray-600">{prettyDate(w.addedAt)}</td> */}
                           <td className="py-2 text-right whitespace-nowrap">
                             {!isEditing ? (
                               <>
                                 <button
-                                  className="text-blue-600 hover:underline mr-3"
+                                  className="text-blue-600 hover:text-blue-800 mr-3"
+                                  title="Редактировать"
                                   onClick={() => beginEdit(w)}
                                 >
-                                  Редактировать
+                                  {/* Иконка карандаш */}
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="inline w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z" />
+                                  </svg>
                                 </button>
                                 <button
-                                  className="text-red-600 hover:underline"
+                                  className="text-red-600 hover:text-red-800"
+                                  title="Удалить"
                                   onClick={() => removeWord(w.id)}
                                 >
-                                  Удалить
+                                  {/* Иконка корзина */}
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="inline w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M10 3h4a1 1 0 011 1v2H9V4a1 1 0 011-1z" />
+                                  </svg>
                                 </button>
                               </>
                             ) : (
@@ -676,31 +682,6 @@ export default function App() {
                   </table>
                 </div>
               )}
-            </section>
-          )}
-
-          {/* SETTINGS */}
-          {tab === 'settings' && (
-            <section className="bg-white rounded-2xl shadow p-3 max-w-xl flex flex-col flex-1 min-h-0">
-              <h2 className="font-semibold mb-2 text-base">Настройки</h2>
-              <Toggle
-                label="Озвучивать слово после проверки"
-                checked={!!settings.ttsOnReveal}
-                onChange={(v) => setSettings({...settings, ttsOnReveal: v})}
-              />
-              <button
-                className="mt-5 px-4 py-3 rounded-xl bg-red-600 text-white w-full sm:w-auto"
-                onClick={() => {
-                  // eslint-disable-next-line no-restricted-globals
-                  if (confirm('Удалить все слова и прогресс?')) {
-                    localStorage.removeItem(LS_KEYS.words);
-                    localStorage.removeItem(LS_KEYS.progress);
-                    window.location.reload();
-                  }
-                }}
-              >
-                Сбросить всё
-              </button>
             </section>
           )}
 
