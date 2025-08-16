@@ -248,6 +248,8 @@ export default function App() {
     setLoading(false);
   }
 
+  const [addSuccess, setAddSuccess] = useState(false);
+
   function handleSelectSuggestion(s) {
     const q = sourceInput.trim();
     if (!q || !s) return;
@@ -260,6 +262,10 @@ export default function App() {
       stats: {seen: 0, correct: 0, wrong: 0},
     };
     setWords([newItem, ...words]);
+    setSourceInput('');
+    setSuggestions([]);
+    setAddSuccess(true);
+    setTimeout(() => setAddSuccess(false), 1200);
   }
 
   function beginEdit(w) {
@@ -549,6 +555,24 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+                {/* Ручной ввод слова */}
+                <ManualAddWord
+                  direction={direction}
+                  sourceInput={sourceInput}
+                  onAdd={(ru, en) => {
+                    const newItem = {
+                      id: safeUUID(),
+                      ru,
+                      en,
+                      stats: {seen: 0, correct: 0, wrong: 0},
+                    };
+                    setWords([newItem, ...words]);
+                    setAddSuccess(true);
+                    setSourceInput('');
+                    setSuggestions([]);
+                    setTimeout(() => setAddSuccess(false), 1200);
+                  }}
+                />
                 {/* Экспорт / Импорт */}
                 <div className="mt-6 flex gap-3">
                   <button
@@ -567,9 +591,17 @@ export default function App() {
                     />
                   </label>
                 </div>
+                <div className="relative">
+                  {addSuccess && (
+                    <div className="absolute left-0 right-0 top-[50px] mx-auto flex justify-center z-10 pointer-events-none">
+                      <div className="bg-green-500 text-white rounded-xl px-4 py-2 text-sm shadow transition-all animate-fade-in-out">
+                        Слово добавлено!
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-
-              {/* Удалён блок "Недавно добавленные" */}
+              {/* ...existing code... */}
             </section>
           )}
 
@@ -797,4 +829,46 @@ function handleImportWordsFactory(words, setWords) {
     // сбрасываем value, чтобы повторно можно было выбрать тот же файл
     e.target.value = '';
   }
+}
+
+// Добавьте компонент для ручного ввода слова:
+function ManualAddWord({ direction, sourceInput, onAdd }) {
+  const [val, setVal] = useState('');
+
+  // Для ru2en: ru = sourceInput, en = val
+  // Для en2ru: ru = val, en = sourceInput
+  const canAdd = val.trim();
+
+  function handleManualAdd() {
+    if (!canAdd) return;
+    if (direction === 'ru2en') {
+      onAdd(sourceInput.trim(), val.trim());
+    } else {
+      onAdd(val.trim(), sourceInput.trim());
+    }
+    setVal('');
+  }
+
+  return (
+    <div className="mt-2 mb-2">
+      <div className="flex gap-2 mb-1">
+        <input
+          className="flex-1 border rounded-xl px-3 py-2 text-base"
+          value={val}
+          onChange={e => setVal(e.target.value)}
+          placeholder={direction === 'ru2en' ? 'Перевод (EN)' : 'Перевод (RU)'}
+        />
+        <button
+          className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm disabled:opacity-50"
+          onClick={handleManualAdd}
+          disabled={!canAdd}
+        >
+          Добавить
+        </button>
+      </div>
+      <div className="text-xs text-gray-400">
+        Введите свой вариант, если ни один из предложенных не подходит.
+      </div>
+    </div>
+  );
 }
