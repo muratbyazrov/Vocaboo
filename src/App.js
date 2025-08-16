@@ -62,7 +62,7 @@ function normalize(str) {
 // TitleCase для отображения (не меняем исходные данные)
 function titleCase(s) {
   return (s || '')
-    .split(/(\s|-)/) // сохраняем пробелы и дефисы как отдельные части
+    .split(/(\s|-)/) // сохраняем пробелы
     .map((part) => {
       if (part === ' ' || part === '-') return part;
       return part.charAt(0).toUpperCase() + part.slice(1);
@@ -420,14 +420,17 @@ export default function App() {
                     </div>
 
                     <div
-                      className="w-full max-w-[340px] aspect-[1/1] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3">
+                      className="w-full max-w-[340px] aspect-[1/1] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3"
+                      style={{position: 'relative'}}
+                    >
                       {isFetchingImg ? (
                         <div className="text-gray-400">Ищу картинку…</div>
                       ) : hasValidImg ? (
                         <img
                           src={cardImg}
                           alt="Illustration"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
+                          style={{maxWidth: '100%', maxHeight: '100%', display: 'block'}}
                           onError={() => setCardImg('')}
                         />
                       ) : (
@@ -711,7 +714,7 @@ export default function App() {
             </section>
           )}
 
-          <footer className="mt-8 text-center text-[10px] text-gray-400 pb-6">
+          <footer className="mt-2 text-center text-[10px] text-gray-400 pb-0.5 leading-tight">
             © {new Date().getFullYear()} Vocaboo — локальное хранилище, без серверной части.
           </footer>
         </div>
