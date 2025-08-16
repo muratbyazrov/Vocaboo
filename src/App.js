@@ -573,24 +573,7 @@ export default function App() {
                     setTimeout(() => setAddSuccess(false), 1200);
                   }}
                 />
-                {/* Экспорт / Импорт */}
-                <div className="mt-6 flex gap-3">
-                  <button
-                    className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm"
-                    onClick={() => handleExportWords(words)}
-                  >
-                    Экспорт слов
-                  </button>
-                  <label className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer">
-                    Импорт слов
-                    <input
-                      type="file"
-                      accept="application/json"
-                      style={{ display: 'none' }}
-                      onChange={handleImportWordsFactory(words, setWords)}
-                    />
-                  </label>
-                </div>
+                {/* Экспорт / Импорт блок удалён из add */}
                 <div className="relative">
                   {addSuccess && (
                     <div className="absolute left-0 right-0 top-[50px] mx-auto flex justify-center z-10 pointer-events-none">
@@ -609,6 +592,24 @@ export default function App() {
           {tab === 'list' && (
             <section className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1 min-h-0">
               <h2 className="font-semibold mb-2 text-base">Ваши слова ({words.length})</h2>
+              {/* Экспорт / Импорт теперь здесь */}
+              <div className="mb-3 flex gap-3">
+                <button
+                  className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm"
+                  onClick={() => handleExportWords(words)}
+                >
+                  Экспорт слов
+                </button>
+                <label className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer">
+                  Импорт слов
+                  <input
+                    type="file"
+                    accept="application/json"
+                    style={{ display: 'none' }}
+                    onChange={handleImportWordsFactory(words, setWords)}
+                  />
+                </label>
+              </div>
               {words.length === 0 ? (
                 <p className="text-gray-500 text-sm">Пока пусто.</p>
               ) : (
