@@ -1,14 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
 
-// React App — Vocaboo (mobile-first)
-// -------------------------------------------------
-// ✓ Полноэкранный фикс-слой без скролла страницы
-// ✓ Внутренний скролл только в main (и в списках/таблицах)
-// ✓ Мобильный UI (100dvh, safe-area, крупные кнопки)
-// ✓ Тренировка: 4 варианта ответа-кнопки (EN), озвучка на касание
-// ✓ Верхний отступ под шапку Telegram через фиксированный header
-// ✓ Отображение слов в словаре с заглавной буквы (display-only)
-
 // -------------------- Utils & Storage --------------------
 const LS_KEYS = {
   words: 'ruen_words_v1',
@@ -36,11 +27,6 @@ function useLocalStorage(key, initialValue) {
 
 function classNames(...xs) {
   return xs.filter(Boolean).join(' ');
-}
-
-function prettyDate(ts) {
-  const d = new Date(ts);
-  return d.toLocaleDateString();
 }
 
 function isValidHttpUrl(u) {
@@ -147,7 +133,7 @@ export default function App() {
     }
   }, []);
 
-  // Устанавливаем переменную --app-vh под высоту экрана (iOS/Android-safe)
+  // Устанавливаем переменную --app-vh под высоту экрана (iOS/Android)
   useEffect(() => {
     const setVh = () => {
       document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`);
@@ -456,7 +442,6 @@ export default function App() {
                             </div>
                           </div>
 
-                          {/* варианты — озвучка на pointerdown, ответ на click */}
                           <div className="grid grid-cols-1 gap-2 w-full max-w-[520px]">
                             {choices.map((c) => {
                               const correctEn = words[queue[currentIdx]].en;
@@ -573,7 +558,7 @@ export default function App() {
                     setTimeout(() => setAddSuccess(false), 1200);
                   }}
                 />
-                {/* Экспорт / Импорт блок удалён из add */}
+
                 <div className="relative">
                   {addSuccess && (
                     <div className="absolute left-0 right-0 top-[50px] mx-auto flex justify-center z-10 pointer-events-none">
@@ -584,7 +569,6 @@ export default function App() {
                   )}
                 </div>
               </div>
-              {/* ...existing code... */}
             </section>
           )}
 
@@ -592,7 +576,6 @@ export default function App() {
           {tab === 'list' && (
             <section className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1 min-h-0">
               <h2 className="font-semibold mb-2 text-base">Ваши слова ({words.length})</h2>
-              {/* Экспорт / Импорт теперь здесь */}
               <div className="mb-3 flex gap-3">
                 <button
                   className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm"
@@ -620,7 +603,6 @@ export default function App() {
                       <th className="py-2">RU</th>
                       <th className="py-2">EN</th>
                       <th className="py-2">Статистика</th>
-                      {/* <th className="py-2">Добавлено</th> */}
                       <th className="py-2 text-right">Действия</th>
                     </tr>
                     </thead>
@@ -666,7 +648,7 @@ export default function App() {
                           <td className="py-2 text-gray-600">
                             {(w.stats?.correct || 0)}/{(w.stats?.seen || 0)} верных
                           </td>
-                          {/* <td className="py-2 text-gray-600">{prettyDate(w.addedAt)}</td> */}
+
                           <td className="py-2 text-right whitespace-nowrap">
                             {!isEditing ? (
                               <div className="flex items-center justify-end gap-5">
@@ -832,7 +814,6 @@ function handleImportWordsFactory(words, setWords) {
   }
 }
 
-// Добавьте компонент для ручного ввода слова:
 function ManualAddWord({ direction, sourceInput, onAdd }) {
   const [val, setVal] = useState('');
 
