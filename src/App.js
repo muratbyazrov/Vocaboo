@@ -352,7 +352,7 @@ export default function App() {
         paddingBottom: 'env(safe-area-inset-bottom, 20px)'
       }}
     >
-      <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur border-b" style={{marginTop: 20}}>
+      <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur border-b" style={{marginTop: 20, marginBottom: 10}}>
         <div className="px-3 pt-[calc(env(safe-area-inset-top))] pb-2 max-w-full mx-auto">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold leading-tight">Vocaboo</h1>
@@ -716,10 +716,6 @@ export default function App() {
               )}
             </section>
           )}
-
-          <footer className="mt-2 text-center text-[10px] text-gray-400 pb-0.5 leading-tight">
-            © {new Date().getFullYear()} Vocaboo — локальное хранилище, без серверной части.
-          </footer>
         </div>
       </main>
     </div>
