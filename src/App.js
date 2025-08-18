@@ -19,8 +19,7 @@ function useLocalStorage(key, initialValue) {
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-    }
+    } catch {}
   }, [key, value]);
   return [value, setValue];
 }
@@ -111,8 +110,7 @@ function ttsSpeak(word, rate = 0.95) {
     if (voice) utt.voice = voice;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utt);
-  } catch {
-  }
+  } catch {}
 }
 
 function safeUUID() {
@@ -575,120 +573,139 @@ export default function App() {
           {/* LIST */}
           {tab === 'list' && (
             <section className="bg-white rounded-2xl shadow p-3 flex flex-col flex-1 min-h-0">
-              <h2 className="font-semibold mb-2 text-base">Ваши слова ({words.length})</h2>
-              <div className="mb-3 flex gap-3">
-                <button
-                  className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm"
-                  onClick={() => handleExportWords(words)}
-                >
-                  Экспорт слов
-                </button>
-                <label className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer">
-                  Импорт слов
-                  <input
-                    type="file"
-                    accept="application/json"
-                    style={{ display: 'none' }}
-                    onChange={handleImportWordsFactory(words, setWords)}
-                  />
-                </label>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-semibold text-base">
+                  {editingId ? 'Редактирование слова' : `Ваши слова (${words.length})`}
+                </h2>
+                {editingId && (
+                  <span className="text-[11px] text-gray-500">Другие записи скрыты на время редактирования</span>
+                )}
               </div>
+
+              {!editingId && (
+                <div className="mb-3 flex gap-3">
+                  <button
+                    className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm"
+                    onClick={() => handleExportWords(words)}
+                  >
+                    Экспорт слов
+                  </button>
+                  <label className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer">
+                    Импорт слов
+                    <input
+                      type="file"
+                      accept="application/json"
+                      style={{ display: 'none' }}
+                      onChange={handleImportWordsFactory(words, setWords)}
+                    />
+                  </label>
+                </div>
+              )}
+
               {words.length === 0 ? (
                 <p className="text-gray-500 text-sm">Пока пусто.</p>
               ) : (
                 <div className="overflow-auto no-scrollbar -mx-1 px-1 flex-1 min-h-0">
                   <table className="w-full text-xs">
-                    <thead>
-                    <tr className="text-left text-gray-500">
-                      <th className="py-2">RU</th>
-                      <th className="py-2">EN</th>
-                      <th className="py-2">Статистика</th>
-                      <th className="py-2 text-right">Действия</th>
-                    </tr>
-                    </thead>
+                    {!editingId && (
+                      <thead>
+                      <tr className="text-left text-gray-500">
+                        <th className="py-2">RU</th>
+                        <th className="py-2">EN</th>
+                        <th className="py-2">Статистика</th>
+                        <th className="py-2 text-right">Действия</th>
+                      </tr>
+                      </thead>
+                    )}
                     <tbody>
-                    {words.map((w) => {
+                    {(editingId ? words.filter(w => w.id === editingId) : words).map((w) => {
                       const isEditing = editingId === w.id;
+                      if (isEditing) {
+                        return (
+                          <tr key={w.id} className="border-t align-top">
+                            <td colSpan={4} className="py-3">
+                              <div className="rounded-2xl border p-3 bg-gray-50">
+                                <div className="text-xs text-gray-500 mb-2">Редактирование записи</div>
+                                <div className="flex flex-col gap-3">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Русское слово</label>
+                                    <input
+                                      className="w-full border rounded-xl px-3 py-3 text-base md:text-lg"
+                                      value={editFields.ru}
+                                      onChange={(e) => setEditFields({...editFields, ru: e.target.value})}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && (editFields.ru||'').trim() && (editFields.en||'').trim()) saveEdit();
+                                        if (e.key === 'Escape') cancelEdit();
+                                      }}
+                                      placeholder="Например: кошка"
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Перевод на английский</label>
+                                    <input
+                                      className="w-full border rounded-xl px-3 py-3 text-base md:text-lg"
+                                      value={editFields.en}
+                                      onChange={(e) => setEditFields({...editFields, en: e.target.value})}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && (editFields.ru||'').trim() && (editFields.en||'').trim()) saveEdit();
+                                        if (e.key === 'Escape') cancelEdit();
+                                      }}
+                                      placeholder="Например: cat"
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-between pt-1">
+                                    <div className="text-[11px] text-gray-500">Подтвердите изменения или отмените редактирование</div>
+                                    <div className="flex items-center gap-3">
+                                      <button
+                                        className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm disabled:opacity-60"
+                                        onClick={saveEdit}
+                                        disabled={!((editFields.ru||'').trim() && (editFields.en||'').trim())}
+                                      >
+                                        Сохранить
+                                      </button>
+                                      <button
+                                        className="px-4 py-2 rounded-xl bg-gray-200 text-gray-800 text-sm"
+                                        onClick={cancelEdit}
+                                      >
+                                        Отмена
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }
                       return (
                         <tr key={w.id} className="border-t align-top">
-                          <td className="py-2">
-                            {isEditing ? (
-                              <input
-                                className="w-full border rounded-lg px-2 py-1"
-                                value={editFields.ru}
-                                onChange={(e) =>
-                                  setEditFields({...editFields, ru: e.target.value})
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveEdit();
-                                  if (e.key === 'Escape') cancelEdit();
-                                }}
-                              />
-                            ) : (
-                              <>{titleCase(w.ru)}</>
-                            )}
-                          </td>
-                          <td className="py-2">
-                            {isEditing ? (
-                              <input
-                                className="w-full border rounded-lg px-2 py-1"
-                                value={editFields.en}
-                                onChange={(e) =>
-                                  setEditFields({...editFields, en: e.target.value})
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveEdit();
-                                  if (e.key === 'Escape') cancelEdit();
-                                }}
-                              />
-                            ) : (
-                              <>{titleCase(w.en)}</>
-                            )}
-                          </td>
-                          <td className="py-2 text-gray-600">
-                            {(w.stats?.correct || 0)}/{(w.stats?.seen || 0)} верных
-                          </td>
-
+                          <td className="py-2">{titleCase(w.ru)}</td>
+                          <td className="py-2">{titleCase(w.en)}</td>
+                          <td className="py-2 text-gray-600">{(w.stats?.correct || 0)}/{(w.stats?.seen || 0)} верных</td>
                           <td className="py-2 text-right whitespace-nowrap">
-                            {!isEditing ? (
-                              <div className="flex items-center justify-end gap-5">
-                                <button
-                                  className="text-blue-600 hover:text-blue-800"
-                                  title="Редактировать"
-                                  onClick={() => beginEdit(w)}
-                                >
-                                  {/* Иконка карандаш */}
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="inline w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z" />
-                                  </svg>
-                                </button>
-                                <button
-                                  className="text-red-600 hover:text-red-800"
-                                  title="Удалить"
-                                  onClick={() => removeWord(w.id)}
-                                >
-                                  {/* Иконка корзина */}
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="inline w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M10 3h4a1 1 0 011 1v2H9V4a1 1 0 011-1z" />
-                                  </svg>
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                <button
-                                  className="text-green-700 hover:underline mr-3"
-                                  onClick={saveEdit}
-                                >
-                                  Сохранить
-                                </button>
-                                <button
-                                  className="text-gray-600 hover:underline"
-                                  onClick={cancelEdit}
-                                >
-                                  Отмена
-                                </button>
-                              </>
-                            )}
+                            <div className="flex items-center justify-end gap-5">
+                              <button
+                                className="text-blue-600 hover:text-blue-800"
+                                title="Редактировать"
+                                onClick={() => beginEdit(w)}
+                              >
+                                {/* Иконка карандаш */}
+                                <svg xmlns="http://www.w3.org/2000/svg" className="inline w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z" />
+                                </svg>
+                              </button>
+                              <button
+                                className="text-red-600 hover:text-red-800"
+                                title="Удалить"
+                                onClick={() => removeWord(w.id)}
+                              >
+                                {/* Иконка корзина */}
+                                <svg xmlns="http://www.w3.org/2000/svg" className="inline w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M10 3h4a1 1 0 011 1v2H9V4a1 1 0 011-1z" />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
