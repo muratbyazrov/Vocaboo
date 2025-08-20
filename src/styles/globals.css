@@ -1,0 +1,21 @@
+/* Tailwind base (если используешь Tailwind) */
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+
+:root {
+  --app-vh: 100vh;
+}
+
+/* скрыть скроллбар, как у тебя */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* небольшая анимация для "Слово добавлено!" */
+@keyframes fadeinout {
+  0% { opacity: 0; transform: translateY(6px) scale(.98); }
+  10% { opacity: 1; transform: translateY(0) scale(1); }
+  90% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(.98); }
+}
+.animate-fade-in-out { animation: fadeinout 1.2s ease-in-out forwards; }
