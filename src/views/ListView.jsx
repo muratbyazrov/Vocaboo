@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { titleCase } from '../utils/strings.js';
 import { EVT_EDITING_ON, EVT_EDITING_OFF } from '../utils/events.js';
-import { exportWords, handleImportWordsFactory } from '../services/images.js'; // reusing export/import here
+import { exportWords, handleImportWordsFactory } from '../services/words-exporter.js';
 
 export default function ListView({ words, setWords }) {
   const [editingId, setEditingId] = useState(null);
