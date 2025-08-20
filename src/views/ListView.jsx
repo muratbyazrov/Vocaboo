@@ -45,9 +45,6 @@ export default function ListView({ words, setWords }) {
         <h2 className="font-semibold text-base">
           {editingId ? 'Редактирование слова' : `Ваши слова (${words.length})`}
         </h2>
-        {editingId && (
-          <span className="text-[11px] text-gray-500">Другие записи скрыты на время редактирования</span>
-        )}
       </div>
 
       {!editingId && (
