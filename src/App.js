@@ -821,11 +821,6 @@ export default function App() {
           {tab === 'list' && <ListView words={words} setWords={setWords} />}
         </div>
       </main>
-
-      {/* Settings footer (optional toggle) */}
-      <div className="fixed right-3 bottom-3 bg-white/90 backdrop-blur rounded-2xl shadow border p-3">
-        <Toggle label="Озвучивать правильный ответ" checked={settings.ttsOnReveal} onChange={(v) => setSettings((s) => ({ ...s, ttsOnReveal: v }))} />
-      </div>
     </div>
   );
 }
