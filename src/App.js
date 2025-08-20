@@ -96,24 +96,27 @@ async function fetchTranslationsOnce(query, from = 'ru', to = 'en', signal) {
   }
 }
 
-async function fetchImageForWord(enWord, signal) {
+async function fetchImageFromPexels(enWord, apiKey, signal) {
   const term = (enWord || '').toString().trim();
-  if (!term) return null;
+  if (!term || !apiKey) return null;
   const q = encodeURIComponent(term);
-  const url = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*&generator=search&gsrsearch=${q}`;
+  const url = `https://api.pexels.com/v1/search?query=${q}&per_page=1&orientation=square`;
   try {
-    const res = await fetch(url, { signal });
+    const res = await fetch(url, { signal, headers: { Authorization: apiKey } });
+    if (!res.ok) throw new Error(`Pexels ${res.status}`);
     const data = await res.json();
-    const pages = data?.query?.pages ? Object.values(data.query.pages) : [];
-    const withThumb = pages.filter((p) => p?.thumbnail?.source);
-    if (withThumb.length > 0) {
-      const src = withThumb[0].thumbnail.source;
-      return isValidHttpUrl(src) ? src : null;
-    }
+    const photo = Array.isArray(data?.photos) ? data.photos[0] : null;
+    const src = photo?.src?.large || photo?.src?.medium || photo?.src?.original;
+    return isValidHttpUrl(src) ? src : null;
   } catch (e) {
-    if (e?.name !== 'AbortError') console.warn('Image fetch failed', e);
+    if (e?.name !== 'AbortError') console.warn('Pexels fetch failed', e);
+    return null;
   }
-  return null;
+}
+
+async function fetchImageForWord(enWord, settingsOrKey, signal) {
+  const apiKey = 'zLDphsYbo4jH1CPnYrCmS5rP7XegY2OSItFmZJEcavjbfnPHAYCsaMHN';
+  return fetchImageFromPexels(enWord, apiKey, signal);
 }
 
 // -------------------- Small UI --------------------
@@ -246,7 +249,7 @@ function handleImportWordsFactory(words, setWords) {
 }
 
 // -------------------- Views --------------------
-function TrainView({ words, progress, setProgress }) {
+function TrainView({ words, progress, setProgress, settings }) {
   const [queue, setQueue] = useState([]); // indices
   const [currentIdx, setCurrentIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -278,12 +281,12 @@ function TrainView({ words, progress, setProgress }) {
     setIsFetchingImg(true);
     setCardImg('');
 
-    fetchImageForWord(w.en, ctrl.signal)
+    fetchImageForWord(w.en, settings, ctrl.signal)
       .then((img) => setCardImg(isValidHttpUrl(img) ? img : ''))
       .finally(() => setIsFetchingImg(false));
 
     return () => ctrl.abort();
-  }, [hasWords, queue, currentIdx, words]);
+  }, [hasWords, queue, currentIdx, words, settings]);
 
   // Build 4 choices
   useEffect(() => {
@@ -788,7 +791,7 @@ export default function App() {
 
       <main className="flex-1 min-h-0 pb-[calc(32px+env(safe-area-inset-bottom))] px-3 flex flex-col max-h-[calc(var(--app-vh)-theme(spacing.16))] overflow-hidden">
         <div className="mx-auto flex-1 min-h-0 flex flex-col" style={{ width: '100%', maxWidth: '480px', minHeight: 0 }}>
-          {tab === 'train' && <TrainView words={words} progress={progress} setProgress={setProgress} />}
+          {tab === 'train' && <TrainView words={words} progress={progress} setProgress={setProgress} settings={settings} />}
           {tab === 'add' && <AddView words={words} setWords={setWords} />}
           {tab === 'list' && <ListView words={words} setWords={setWords} />}
         </div>
