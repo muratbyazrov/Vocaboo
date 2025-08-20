@@ -175,58 +175,6 @@ function RevealPanel({ correctAnswer }) {
   );
 }
 
-// -------------------- Export/Import helpers --------------------
-function exportWords(words) {
-  try {
-    const data = JSON.stringify(words, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'vocaboo_words.json';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 0);
-  } catch (e) {
-    // eslint-disable-next-line no-alert
-    alert('Ошибка экспорта');
-  }
-}
-
-function handleImportWordsFactory(words, setWords) {
-  return function handleImportWords(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const imported = JSON.parse(event.target.result);
-        if (!Array.isArray(imported)) throw new Error('Некорректный формат файла');
-        // Dedup by id and by (ru,en) pair
-        const existById = new Set(words.map((w) => w.id));
-        const existByPair = new Set(words.map((w) => `${normalize(w.ru)}|${normalize(w.en)}`));
-        const fresh = imported.filter((w) => {
-          if (!w || !w.id || !w.ru || !w.en) return false;
-          const pair = `${normalize(w.ru)}|${normalize(w.en)}`;
-          return !existById.has(w.id) && !existByPair.has(pair);
-        });
-        setWords((prev) => [...fresh, ...prev]);
-        // eslint-disable-next-line no-alert
-        alert(`Импортировано слов: ${fresh.length}`);
-      } catch (err) {
-        // eslint-disable-next-line no-alert
-        alert('Ошибка импорта: ' + err.message);
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-}
-
-// -------------------- Views --------------------
 function Header({ progress, accuracy, tab, setTab }) {
   return (
     <header className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur border-b" style={{ marginTop: 20, marginBottom: 10 }}>
@@ -249,6 +197,55 @@ function Header({ progress, accuracy, tab, setTab }) {
   );
 }
 
+// -------------------- Export/Import helpers --------------------
+function exportWords(words) {
+  try {
+    const data = JSON.stringify(words, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vocaboo_words.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 0);
+  } catch (e) {
+    alert('Ошибка экспорта');
+  }
+}
+
+function handleImportWordsFactory(words, setWords) {
+  return function handleImportWords(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (!Array.isArray(imported)) throw new Error('Некорректный формат файла');
+        // Dedup by id and by (ru,en) pair
+        const existById = new Set(words.map((w) => w.id));
+        const existByPair = new Set(words.map((w) => `${normalize(w.ru)}|${normalize(w.en)}`));
+        const fresh = imported.filter((w) => {
+          if (!w || !w.id || !w.ru || !w.en) return false;
+          const pair = `${normalize(w.ru)}|${normalize(w.en)}`;
+          return !existById.has(w.id) && !existByPair.has(pair);
+        });
+        setWords((prev) => [...fresh, ...prev]);
+        alert(`Импортировано слов: ${fresh.length}`);
+      } catch (err) {
+        alert('Ошибка импорта: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+}
+
+// -------------------- Views --------------------
 function TrainView({ words, progress, setProgress }) {
   const [queue, setQueue] = useState([]); // indices
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -312,14 +309,13 @@ function TrainView({ words, progress, setProgress }) {
 
       const correct = normalize(selected) === normalize(w.en);
 
-      // update per-word stats (in localStorage via setWords in parent – we don't have it here),
-      // so in this refactor we emit a custom event to bubble the update.
+      // Update per-word stats via custom event to parent (App)
       const event = new CustomEvent('vocaboo:updateWordStats', {
         detail: { index: idx, correct },
       });
       window.dispatchEvent(event);
 
-      // progress
+      // Update progress
       setProgress((p) => {
         const newHist = [...(p.history || []).slice(-199), { ts: Date.now(), correct }];
         return {
@@ -345,77 +341,64 @@ function TrainView({ words, progress, setProgress }) {
     [queue, currentIdx, words, setProgress]
   );
 
-  if (!hasWords) {
-    return (
-      <section className="grid gap-4 flex-1 min-h-0">
-        <div className="bg-white rounded-2xl shadow p-3 flex flex-col items-center flex-1 min-h-0">
-          <div className="text-gray-500 text-sm text-center">
-            Нет слов для тренировки. Добавьте слова в разделе «Словарь».
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  const idx = queue[currentIdx];
-  const current = typeof idx === 'number' ? words[idx] : null;
+  const hasValidIdx = queue.length > 0 && typeof queue[currentIdx] === 'number';
+  const current = hasValidIdx ? words[queue[currentIdx]] : null;
 
   return (
     <section className="grid gap-4 flex-1 min-h-0">
       <div className="bg-white rounded-2xl shadow p-3 flex flex-col items-center flex-1 min-h-0">
-        <div className="w-full flex items-center justify-between mb-2">
-          <div className="text-xs text-gray-500">
-            {queue.length ? `Карточка ${currentIdx + 1} / ${queue.length}` : '—'}
-          </div>
-        </div>
-
-        <div className="w-full max-w-[340px] aspect-[1/1] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3 relative">
-          {isFetchingImg ? (
-            <div className="text-gray-400">Ищу картинку…</div>
-          ) : hasValidImg ? (
-            <img
-              src={cardImg}
-              alt="Illustration"
-              className="w-full h-full object-cover" // cover to fill square neatly
-              onError={() => setCardImg('')}
-            />
-          ) : (
-            <div className="text-6xl">🧠</div>
-          )}
-        </div>
-
-        {current && (
+        {!hasWords ? (
+          <div className="text-gray-500 text-sm text-center">Нет слов для тренировки. Добавьте слова в разделе «Словарь».</div>
+        ) : (
           <>
-            <div className="text-center mb-2">
-              <div className="text-xs text-gray-500 mb-1">Выберите перевод на английском:</div>
-              <div className="text-xl font-semibold">{titleCase(current.ru)}</div>
+            <div className="w-full flex items-center justify-between mb-2">
+              <div className="text-xs text-gray-500">{queue.length ? `Карточка ${currentIdx + 1} / ${queue.length}` : '—'}</div>
             </div>
 
-            <div className="grid grid-cols-1 gap-2 w-full max-w-[520px]">
-              {choices.map((c) => {
-                const correctChoice = normalize(c) === normalize(current.en);
-                return (
-                  <button
-                    key={c}
-                    onPointerDown={() => c && ttsSpeak(c)}
-                    onClick={() => onPick(c)}
-                    className={classNames(
-                      'px-4 py-3 rounded-xl border text-base active:scale-[.99] text-left',
-                      revealed
-                        ? correctChoice
-                          ? 'bg-green-50 border-green-300'
-                          : 'bg-red-50 border-red-300'
-                        : 'bg-white hover:bg-gray-50'
-                    )}
-                    aria-label={`Choice: ${c}`}
-                  >
-                    {titleCase(c)}
-                  </button>
-                );
-              })}
+            <div className="w-full max-w-[340px] aspect-[1/1] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3 relative">
+              {isFetchingImg ? (
+                <div className="text-gray-400">Ищу картинку…</div>
+              ) : hasValidImg ? (
+                <img src={cardImg} alt="Illustration" className="w-full h-full object-cover" onError={() => setCardImg('')} />
+              ) : (
+                <div className="text-6xl">🧠</div>
+              )}
             </div>
 
-            {revealed && <RevealPanel correctAnswer={current.en} />}
+            {current && (
+              <>
+                <div className="text-center mb-2">
+                  <div className="text-xs text-gray-500 mb-1">Выберите перевод на английском:</div>
+                  <div className="text-xl font-semibold">{titleCase(current.ru)}</div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 w-full max-w-[520px]">
+                  {choices.map((c) => {
+                    const correctChoice = normalize(c) === normalize(current.en);
+                    return (
+                      <button
+                        key={c}
+                        onPointerDown={() => c && ttsSpeak(c)}
+                        onClick={() => onPick(c)}
+                        className={classNames(
+                          'px-4 py-3 rounded-xl border text-base active:scale-[.99] text-left',
+                          revealed
+                            ? correctChoice
+                              ? 'bg-green-50 border-green-300'
+                              : 'bg-red-50 border-red-300'
+                            : 'bg-white hover:bg-gray-50'
+                        )}
+                        aria-label={`Choice: ${c}`}
+                      >
+                        {titleCase(c)}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {revealed && <RevealPanel correctAnswer={current.en} />}
+              </>
+            )}
           </>
         )}
       </div>
@@ -437,12 +420,9 @@ function AddView({ words, setWords }) {
     (q) => {
       if (!q?.trim()) return;
       setLoading(true);
-
-      // cancel prev
       if (abortRef.current) abortRef.current.abort();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
-
       const from = direction === 'ru2en' ? 'ru' : 'en';
       const to = direction === 'ru2en' ? 'en' : 'ru';
       fetchTranslationsOnce(q, from, to, ctrl.signal)
@@ -454,7 +434,7 @@ function AddView({ words, setWords }) {
 
   const handleSearch = useCallback(() => doLookup(sourceInput), [doLookup, sourceInput]);
 
-  // Debounce on typing (optional nicety)
+  // Debounce on typing
   useEffect(() => {
     if (!sourceInput.trim()) {
       setSuggestions([]);
@@ -501,9 +481,7 @@ function AddView({ words, setWords }) {
           <DirectionButton label="RU→EN" active={direction === 'ru2en'} onClick={() => { setDirection('ru2en'); setSuggestions([]); }} />
           <DirectionButton label="EN→RU" active={direction === 'en2ru'} onClick={() => { setDirection('en2ru'); setSuggestions([]); }} />
         </div>
-        <label className="block text-xs mb-1">
-          {direction === 'ru2en' ? 'Исходное слово по-русски' : 'Source word in English'}
-        </label>
+        <label className="block text-xs mb-1">{direction === 'ru2en' ? 'Исходное слово по-русски' : 'Source word in English'}</label>
         <div className="flex gap-2 mb-2">
           <input
             className="flex-1 border rounded-xl px-3 py-2 text-base"
@@ -512,29 +490,18 @@ function AddView({ words, setWords }) {
             placeholder={direction === 'ru2en' ? 'например: кошка' : 'e.g., cat'}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
-          <button
-            onClick={handleSearch}
-            className={classNames('px-3 py-2 rounded-xl bg-blue-600 text-white text-sm', loading && 'opacity-60')}
-            disabled={loading}
-          >
+          <button onClick={handleSearch} className={classNames('px-3 py-2 rounded-xl bg-blue-600 text-white text-sm', loading && 'opacity-60')} disabled={loading}>
             {loading ? 'Ищу…' : 'Подобрать'}
           </button>
         </div>
-        {suggestions.length > 0 && (
-          <div className="mb-1 text-xs text-gray-500">Нажмите на перевод, чтобы сразу сохранить его в словарь:</div>
-        )}
+        {suggestions.length > 0 && <div className="mb-1 text-xs text-gray-500">Нажмите на перевод, чтобы сразу сохранить его в словарь:</div>}
         <div className="flex flex-wrap gap-2 no-scrollbar">
           {suggestions.map((s) => (
-            <button
-              key={s}
-              onClick={() => handleSelectSuggestion(s)}
-              className="px-3 py-2 rounded-full border hover:bg-gray-50 active:scale-[.98] text-sm"
-            >
+            <button key={s} onClick={() => handleSelectSuggestion(s)} className="px-3 py-2 rounded-full border hover:bg-gray-50 active:scale-[.98] text-sm">
               {s}
             </button>
           ))}
         </div>
-        {/* Manual add */}
         <ManualAddWord direction={direction} sourceInput={sourceInput} onAdd={onManualAdd} />
         <div className="relative">
           {addSuccess && (
@@ -552,6 +519,11 @@ function ListView({ words, setWords }) {
   const [editingId, setEditingId] = useState(null);
   const [editFields, setEditFields] = useState({ ru: '', en: '' });
 
+  useEffect(() => {
+    if (editingId) window.dispatchEvent(new Event('vocaboo:editingOn'));
+    else window.dispatchEvent(new Event('vocaboo:editingOff'));
+  }, [editingId]);
+
   const beginEdit = (w) => {
     setEditingId(w.id);
     setEditFields({ ru: w.ru, en: w.en });
@@ -567,7 +539,6 @@ function ListView({ words, setWords }) {
     const ru = (editFields.ru || '').trim();
     const en = (editFields.en || '').trim();
     if (!ru || !en) {
-      // eslint-disable-next-line no-alert
       alert('Оба поля должны быть заполнены');
       return;
     }
@@ -590,9 +561,7 @@ function ListView({ words, setWords }) {
 
       {!editingId && (
         <div className="mb-3 flex gap-3">
-          <button className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm" onClick={() => exportWords(words)}>
-            Экспорт слов
-          </button>
+          <button className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm" onClick={() => exportWords(words)}>Экспорт слов</button>
           <label className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer">
             Импорт слов
             <input type="file" accept="application/json" style={{ display: 'none' }} onChange={handleImportWordsFactory(words, setWords)} />
@@ -655,16 +624,8 @@ function ListView({ words, setWords }) {
                           <div className="flex items-center justify-between pt-1">
                             <div className="text-[11px] text-gray-500">Подтвердите изменения или отмените редактирование</div>
                             <div className="flex items-center gap-3">
-                              <button
-                                className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm disabled:opacity-60"
-                                onClick={saveEdit}
-                                disabled={!((editFields.ru || '').trim() && (editFields.en || '').trim())}
-                              >
-                                Сохранить
-                              </button>
-                              <button className="px-4 py-2 rounded-xl bg-gray-200 text-gray-800 text-sm" onClick={cancelEdit}>
-                                Отмена
-                              </button>
+                              <button className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm disabled:opacity-60" onClick={saveEdit} disabled={!((editFields.ru || '').trim() && (editFields.en || '').trim())}>Сохранить</button>
+                              <button className="px-4 py-2 rounded-xl bg-gray-200 text-gray-800 text-sm" onClick={cancelEdit}>Отмена</button>
                             </div>
                           </div>
                         </div>
@@ -768,6 +729,7 @@ export default function App() {
 
   // Update word stats from TrainView via custom event
   useEffect(() => {
+    const prevSafe = (v) => typeof v === 'string' && v.trim();
     const handler = (e) => {
       const { index, correct } = e.detail || {};
       setWords((prev) =>
@@ -784,12 +746,11 @@ export default function App() {
             : item
         )
       );
-      if (settings.ttsOnReveal && prevSafe(words[index]?.en)) {
-        ttsSpeak(words[index].en);
+      const en = words[index]?.en;
+      if (settings.ttsOnReveal && prevSafe(en)) {
+        ttsSpeak(en);
       }
     };
-
-    const prevSafe = (v) => typeof v === 'string' && v.trim();
 
     window.addEventListener('vocaboo:updateWordStats', handler);
     return () => window.removeEventListener('vocaboo:updateWordStats', handler);
@@ -798,6 +759,19 @@ export default function App() {
   const accuracy = useMemo(() => {
     return progress.totalAnswered ? Math.round((100 * (progress.totalCorrect || 0)) / progress.totalAnswered) : 0;
   }, [progress]);
+
+  // Detect editing mode to hide Header
+  const [isEditing, setIsEditing] = useState(false);
+  useEffect(() => {
+    const on = () => setIsEditing(true);
+    const off = () => setIsEditing(false);
+    window.addEventListener('vocaboo:editingOn', on);
+    window.addEventListener('vocaboo:editingOff', off);
+    return () => {
+      window.removeEventListener('vocaboo:editingOn', on);
+      window.removeEventListener('vocaboo:editingOff', off);
+    };
+  }, []);
 
   return (
     <div
@@ -810,11 +784,9 @@ export default function App() {
         paddingBottom: 'env(safe-area-inset-bottom, 20px)',
       }}
     >
-      <Header progress={progress} accuracy={accuracy} tab={tab} setTab={setTab} />
+      {!isEditing && <Header progress={progress} accuracy={accuracy} tab={tab} setTab={setTab} />}
 
-      <main
-        className="flex-1 min-h-0 pb-[calc(32px+env(safe-area-inset-bottom))] px-3 flex flex-col max-h-[calc(var(--app-vh)-theme(spacing.16))] overflow-hidden"
-      >
+      <main className="flex-1 min-h-0 pb-[calc(32px+env(safe-area-inset-bottom))] px-3 flex flex-col max-h-[calc(var(--app-vh)-theme(spacing.16))] overflow-hidden">
         <div className="mx-auto flex-1 min-h-0 flex flex-col" style={{ width: '100%', maxWidth: '480px', minHeight: 0 }}>
           {tab === 'train' && <TrainView words={words} progress={progress} setProgress={setProgress} />}
           {tab === 'add' && <AddView words={words} setWords={setWords} />}
