@@ -6,7 +6,7 @@ export default function Header({ progress, accuracy, tab, setTab }) {
   return (
     <header
       className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur border-b"
-      style={{ marginTop: 20, marginBottom: 10 }}
+      style={{ marginTop: 5, marginBottom: 8 }}
     >
       <div className="px-3 pt-[calc(env(safe-area-inset-top))] pb-2 max-w-full mx-auto">
         <div className="flex items-center justify-between">
