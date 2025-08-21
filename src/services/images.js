@@ -1,4 +1,4 @@
-import { isValidHttpUrl } from '../utils/url.js';
+import {isValidHttpUrl} from '../utils/url.js';
 
 // --- Pexels ---
 async function fetchImageFromPexels(enWord, apiKey, signal) {
@@ -8,7 +8,7 @@ async function fetchImageFromPexels(enWord, apiKey, signal) {
   // orientation=square как в твоём коде, можно заменить на landscape под 3:2
   const url = `https://api.pexels.com/v1/search?query=${q}&per_page=1&orientation=square`;
   try {
-    const res = await fetch(url, { signal, headers: { Authorization: apiKey } });
+    const res = await fetch(url, {signal, headers: {Authorization: apiKey}});
     if (!res.ok) throw new Error(`Pexels ${res.status}`);
     const data = await res.json();
     const photo = Array.isArray(data?.photos) ? data.photos[0] : null;
@@ -26,12 +26,7 @@ async function fetchImageFromPexels(enWord, apiKey, signal) {
  * а по-хорошему взять из ENV: import.meta.env.VITE_PEXELS_API_KEY
  */
 export async function fetchImageForWord(enWord, settingsOrKey, signal) {
-  // 1) ENV ключ (Vite), иначе 2) прямой ключ строкой, иначе 3) settings.apiKey
-  const envKey = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_PEXELS_API_KEY : undefined;
-  const apiKey =
-    envKey ||
-    (typeof settingsOrKey === 'string' ? settingsOrKey : settingsOrKey?.pexelsApiKey) ||
-    'zLDphsYbo4jH1CPnYrCmS5rP7XegY2OSItFmZJEcavjbfnPHAYCsaMHN'; // твой текущий ключ из кода
+  const apiKey = 'zLDphsYbo4jH1CPnYrCmS5rP7XegY2OSItFmZJEcavjbfnPHAYCsaMHN'; // твой текущий ключ из кода
 
   return fetchImageFromPexels(enWord, apiKey, signal);
 }

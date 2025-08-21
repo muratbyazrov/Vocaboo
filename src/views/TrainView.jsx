@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { isValidHttpUrl } from '../utils/url.js';
 import { titleCase, normalize } from '../utils/strings.js';
 import classNames from '../utils/classNames.js';
@@ -39,7 +39,7 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
     setIsFetchingImg(true);
     setCardImg('');
 
-    fetchImageForWord(w.en, settingsKey, ctrl.signal)
+    fetchImageForWord(w.en, ctrl.signal)
       .then((img) => setCardImg(isValidHttpUrl(img) ? img : ''))
       .finally(() => setIsFetchingImg(false));
 
