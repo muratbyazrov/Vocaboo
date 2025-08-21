@@ -48,12 +48,7 @@ async function fetchImageFromPexels(enWord, apiKey, signal) {
 }
 
 
-/**
- * Универсальный резолвер картинки для слова
- * settingsOrKey: можно передать строку API-ключа или объект настроек,
- * а по-хорошему взять из ENV: import.meta.env.VITE_PEXELS_API_KEY
- */
-export async function fetchImageForWord(enWord, settingsOrKey, signal) {
+export async function fetchImageForWord(enWord, signal) {
   const apiKey = 'zLDphsYbo4jH1CPnYrCmS5rP7XegY2OSItFmZJEcavjbfnPHAYCsaMHN'; // твой текущий ключ из кода
 
   return fetchImageFromPexels(enWord, apiKey, signal);
