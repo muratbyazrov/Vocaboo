@@ -80,9 +80,12 @@ export default function AddView({ words, setWords }) {
   );
 
   return (
-    <section className="grid md:grid-cols-2 gap-4 flex-1 min-h-0">
-      <div className="bg-white rounded-2xl shadow p-3 flex flex-col min-h-0">
+    // УБРАЛ flex-1 и min-h-0, чтобы секция не была зажата по высоте
+    <section className="grid md:grid-cols-2 gap-4 w-full">
+      {/* Карточка растягивается по контенту, overflow видимый */}
+      <div className="bg-white rounded-2xl shadow p-3 flex flex-col h-auto overflow-visible">
         <h2 className="font-semibold mb-2 text-base">Добавить слово одним нажатием</h2>
+
         <div className="flex flex-wrap gap-2 mb-2">
           <DirectionButton
             label="RU→EN"
@@ -101,9 +104,11 @@ export default function AddView({ words, setWords }) {
             }}
           />
         </div>
+
         <label className="block text-xs mb-1">
           {direction === 'ru2en' ? 'Исходное слово по-русски' : 'Source word in English'}
         </label>
+
         <div className="flex gap-2 mb-2">
           <input
             className="flex-1 border rounded-xl px-3 py-2 text-base"
@@ -114,31 +119,35 @@ export default function AddView({ words, setWords }) {
           />
           <button
             onClick={handleSearch}
-            className={`px-3 py-2 rounded-xl bg-blue-600 text-white text-sm ${
-              loading ? 'opacity-60' : ''
-            }`}
+            className={`px-3 py-2 rounded-xl bg-blue-600 text-white text-sm ${loading ? 'opacity-60' : ''}`}
             disabled={loading}
           >
             {loading ? 'Ищу…' : 'Подобрать'}
           </button>
         </div>
+
         {suggestions.length > 0 && (
           <div className="mb-1 text-xs text-gray-500">
             Нажмите на перевод, чтобы сразу сохранить его в словарь:
           </div>
         )}
-        <div className="flex flex-wrap gap-2 no-scrollbar">
+
+        {/* Контейнер с подсказками занимает всю ширину и переносит элементы */}
+        <div className="flex flex-wrap gap-2 w-full">
           {suggestions.map((s) => (
             <button
               key={s}
               onClick={() => handleSelectSuggestion(s)}
-              className="px-3 py-2 rounded-full border hover:bg-gray-50 active:scale-[.98] text-sm"
+              className="px-3 py-2 rounded-full border hover:bg-gray-50 active:scale-[.98] text-sm max-w-full break-words"
             >
               {s}
             </button>
           ))}
         </div>
+
         <ManualAddWord direction={direction} sourceInput={sourceInput} onAdd={onManualAdd} />
+
+        {/* Тост успеха поверх, но карточка может расти, чтобы не вываливаться */}
         <div className="relative">
           {addSuccess && (
             <div className="absolute left-0 right-0 top-[50px] mx-auto flex justify-center z-10 pointer-events-none">
