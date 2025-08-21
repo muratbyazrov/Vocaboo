@@ -85,8 +85,9 @@ export default function ListView({ words, setWords }) {
     <section
       className="
         bg-white rounded-2xl shadow
-        p-3 sm:p-6
+        p-2 sm:p-6
         max-w-xl w-full mx-auto
+        mt-3
       "
     >
       {/* Хедер */}
