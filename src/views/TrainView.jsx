@@ -250,7 +250,8 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
                           aria-pressed={isSelected || undefined}
                         >
                           {/* Изображение */}
-                          <div className="flex-1 bg-gray-100 relative overflow-hidden">
+                          <div
+                            className="w-full max-w-[320px] aspect-[3/9] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3 relative">
                             {loading ? (
                               <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
                                 Ищу картинку…
@@ -272,7 +273,7 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
 
                           {/* Подпись */}
                           <div className="px-4 py-3">
-                          <div className={classNames('text-base font-medium truncate', labelStateClass)} title={c}>
+                            <div className={classNames('text-lg font-medium truncate', labelStateClass)} title={c}>
                               {titleCase(c)}
                             </div>
                           </div>
