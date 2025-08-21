@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { HiDownload, HiUpload } from 'react-icons/hi';
 import { titleCase } from '../utils/strings.js';
 import { EVT_EDITING_ON, EVT_EDITING_OFF } from '../utils/events.js';
@@ -7,48 +7,26 @@ import { exportWords, handleImportWordsFactory } from '../services/words-exporte
 export default function ListView({ words, setWords }) {
   const [editingId, setEditingId] = useState(null);
   const [editFields, setEditFields] = useState({ ru: '', en: '' });
-
-  // Признак открытой клавиатуры и величина перекрытия
   const [isKbOpen, setIsKbOpen] = useState(false);
-  const [kbInset, setKbInset] = useState(0);
-
-  // Высота панели действий (нужна для спейсера)
-  const barRef = useRef(null);
-  const [barHeight, setBarHeight] = useState(64);
 
   useEffect(() => {
     if (editingId) window.dispatchEvent(new Event(EVT_EDITING_ON));
     else window.dispatchEvent(new Event(EVT_EDITING_OFF));
   }, [editingId]);
 
-  // Отслеживаем клавиатуру через visualViewport
+  // эвристика открытия клавиатуры — корректируем нижний паддинг панели действий
   useEffect(() => {
     if (!editingId) return;
     const vv = window.visualViewport;
     if (!vv) return;
-
     const onResize = () => {
-      // Насколько визуальный вьюпорт “сжат” клавиатурой
-      const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setKbInset(overlap);
-      setIsKbOpen(overlap > 140); // эвристика
+      const diff = Math.max(0, window.innerHeight - vv.height);
+      setIsKbOpen(diff > 140);
     };
-
     onResize();
     vv.addEventListener('resize', onResize);
-    vv.addEventListener('scroll', onResize); // на iOS при зуме/скролле смещается offsetTop
-    return () => {
-      vv.removeEventListener('resize', onResize);
-      vv.removeEventListener('scroll', onResize);
-    };
+    return () => vv.removeEventListener('resize', onResize);
   }, [editingId]);
-
-  // Обновляем высоту панели после рендера
-  useEffect(() => {
-    if (barRef.current) {
-      setBarHeight(barRef.current.offsetHeight || 64);
-    }
-  }, [isKbOpen, editFields]);
 
   const beginEdit = (w) => {
     setEditingId(w.id);
@@ -59,7 +37,6 @@ export default function ListView({ words, setWords }) {
     setEditingId(null);
     setEditFields({ ru: '', en: '' });
     setIsKbOpen(false);
-    setKbInset(0);
   };
 
   const saveEdit = () => {
@@ -87,7 +64,7 @@ export default function ListView({ words, setWords }) {
         bg-white rounded-2xl shadow
         p-2 sm:p-6
         max-w-xl w-full mx-auto
-        mt-3
+        mt-1
       "
     >
       {/* Хедер */}
@@ -99,17 +76,18 @@ export default function ListView({ words, setWords }) {
 
       {/* Импорт / Экспорт */}
       {!editingId && (
-        <div className="mb-4 flex flex-row gap-2 items-center">
+        <div className="mb-3 flex flex-row gap-4 items-center">
           <button
             className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm hover:bg-green-700 active:scale-[0.99] transition"
             onClick={() => exportWords(words)}
           >
-            <HiDownload className="w-4 h-4" />
+            <HiDownload className="w-4 h-4"/>
             <span>Экспорт слов</span>
           </button>
 
-          <label className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer hover:bg-blue-700 active:scale-[0.99] transition">
-            <HiUpload className="w-4 h-4" />
+          <label
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer hover:bg-blue-700 active:scale-[0.99] transition">
+            <HiUpload className="w-4 h-4"/>
             <span>Импорт слов</span>
             <input
               type="file"
@@ -174,60 +152,35 @@ export default function ListView({ words, setWords }) {
                 </div>
               </div>
 
-              {/* Если панель fixed — добавляем спейсер, чтобы её не перекрывал контент */}
-              {isKbOpen && <div style={{ height: barHeight + 8 }} />}
-
-              {/* Панель действий: sticky в норме, fixed при открытой клавиатуре */}
+              {/* Липкая панель действий */}
               <div
-                ref={barRef}
-                className={
-                  isKbOpen
-                    ? // Фиксируем ко дну видимой области
-                    'fixed inset-x-0 z-40'
-                    : // Обычный режим — прилипает к низу контейнера
-                    'sticky bottom-0'
-                }
-                style={
-                  isKbOpen
-                    ? {
-                      // Ставим ровно поверх клавиатуры
-                      bottom: `calc(${kbInset}px)`,
-                      // фон и отступы
-                    }
-                    : undefined
-                }
+                className="
+                  sticky bottom-0 mt-4
+                  px-3 sm:px-4 pb-3
+                  bg-gray-50/95 backdrop-blur
+                  border-t border-gray-200
+                "
+                style={{
+                  paddingBottom: isKbOpen
+                    ? 'max(env(safe-area-inset-bottom), 8px)'
+                    : 'max(env(safe-area-inset-bottom), 12px)',
+                }}
               >
-                <div
-                  className="
-                    mt-4
-                    px-3 sm:px-4
-                    bg-gray-50/95 backdrop-blur
-                    border-t border-gray-200
-                    max-w-xl mx-auto rounded-b-2xl
-                  "
-                  style={{
-                    paddingBottom: isKbOpen
-                      ? 'max(env(safe-area-inset-bottom), 8px)'
-                      : 'max(env(safe-area-inset-bottom), 12px)',
-                    paddingTop: 12,
-                  }}
-                >
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <button
-                        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-green-600 text-white text-sm disabled:opacity-60 hover:bg-green-700 transition"
-                        onClick={saveEdit}
-                        disabled={!(editFields.ru.trim() && editFields.en.trim())}
-                      >
-                        Сохранить
-                      </button>
-                      <button
-                        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-gray-200 text-gray-800 text-sm hover:bg-gray-300 transition"
-                        onClick={cancelEdit}
-                      >
-                        Отмена
-                      </button>
-                    </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2 sm:gap-3 mt-4">
+                    <button
+                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-green-600 text-white text-sm disabled:opacity-60 hover:bg-green-700 transition"
+                      onClick={saveEdit}
+                      disabled={!(editFields.ru.trim() && editFields.en.trim())}
+                    >
+                      Сохранить
+                    </button>
+                    <button
+                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-gray-200 text-gray-800 text-sm hover:bg-gray-300 transition"
+                      onClick={cancelEdit}
+                    >
+                      Отмена
+                    </button>
                   </div>
                 </div>
               </div>
