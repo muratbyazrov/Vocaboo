@@ -4,13 +4,15 @@ import { titleCase } from '../utils/strings.js';
 
 export default function RevealPanel({ correctAnswer, isCorrect = false }) {
   const boxClasses = classNames(
-    'mt-3 rounded-xl px-4 py-3 text-sm border',
+    'fixed top-6 left-1/2 -translate-x-1/2 z-50', // выше отступ и центрирование
+    'w-[80%] max-w-2xl', // адаптивная ширина
+    'rounded-xl px-6 py-4 text-base font-medium shadow-lg backdrop-blur-sm',
+    'bg-opacity-90',
     isCorrect
-      ? 'border-green-300 bg-green-50 text-green-700'
-      : 'border-red-300 bg-red-50 text-red-700'
+      ? 'border border-green-300 bg-green-50/90 text-green-700'
+      : 'border border-red-300 bg-red-50/90 text-red-700'
   );
 
-  // список фраз-похвал
   const successPhrases = [
     'Молодец!',
     'Отлично!',
@@ -25,10 +27,9 @@ export default function RevealPanel({ correctAnswer, isCorrect = false }) {
     'Вот это скилл!',
     'Фантастика!',
     'Уровень бог!',
-    'Нейросети завидуют!'
+    'Нейросети завидуют!',
   ];
 
-  // выбираем случайную фразу при правильном ответе
   const randomPhrase = useMemo(() => {
     if (!isCorrect) return null;
     const idx = Math.floor(Math.random() * successPhrases.length);
@@ -41,7 +42,7 @@ export default function RevealPanel({ correctAnswer, isCorrect = false }) {
         <span>{randomPhrase}</span>
       ) : (
         <span>
-          Правильный ответ:&nbsp;
+          Неверно. Правильный ответ:&nbsp;
           <strong className="font-semibold">{titleCase(correctAnswer)}</strong>
         </span>
       )}
