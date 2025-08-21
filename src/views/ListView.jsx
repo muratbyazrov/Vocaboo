@@ -166,10 +166,7 @@ export default function ListView({ words, setWords }) {
                 }}
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-[11px] text-gray-500">
-                    Подтвердите изменения или отмените редактирование
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 mt-2">
                     <button
                       className="w-full sm:w-auto px-4 py-2 rounded-xl bg-green-600 text-white text-sm disabled:opacity-60 hover:bg-green-700 transition"
                       onClick={saveEdit}
@@ -217,7 +214,7 @@ export default function ListView({ words, setWords }) {
                   </div>
 
                   {/* Действия */}
-                  <div className="shrink-0 flex items-center gap-3">
+                  <div className="shrink-0 flex items-center gap-7">
                     <button
                       className="text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded-md px-1"
                       title="Редактировать"
