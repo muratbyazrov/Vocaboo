@@ -4,13 +4,13 @@ import { titleCase } from '../utils/strings.js';
 
 export default function RevealPanel({ correctAnswer, isCorrect = false }) {
   const boxClasses = classNames(
-    'fixed top-6 left-1/2 -translate-x-1/2 z-50', // выше отступ и центрирование
+    'fixed top-10 left-1/2 -translate-x-1/2 z-50', // выше отступ и центрирование
     'w-[80%] max-w-2xl', // адаптивная ширина
     'rounded-xl px-6 py-4 text-base font-medium shadow-lg backdrop-blur-sm',
     'bg-opacity-90',
     isCorrect
-      ? 'border border-green-300 bg-green-50/90 text-green-700'
-      : 'border border-red-300 bg-red-50/90 text-red-700'
+      ? 'bg-green-50/90 text-green-700'
+      : 'bg-red-50/90 text-red-700'
   );
 
   const successPhrases = [
