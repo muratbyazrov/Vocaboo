@@ -62,13 +62,13 @@ export default function ListView({ words, setWords }) {
     <section
       className="
         bg-white rounded-2xl shadow
-        p-4 sm:p-6
+        p-3 sm:p-6
         max-w-xl w-full mx-auto
       "
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}
     >
       {/* Хедер */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-base sm:text-lg">
           {editingId ? 'Редактирование слова' : `Ваши слова (${wordsCount})`}
         </h2>
@@ -76,17 +76,18 @@ export default function ListView({ words, setWords }) {
 
       {/* Импорт / Экспорт */}
       {!editingId && (
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="mb-4 flex flex-row gap-2 items-center">
           <button
             className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm hover:bg-green-700 active:scale-[0.99] transition"
             onClick={() => exportWords(words)}
           >
-            <HiDownload className="w-4 h-4" />
+            <HiDownload className="w-4 h-4"/>
             <span>Экспорт слов</span>
           </button>
 
-          <label className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer hover:bg-blue-700 active:scale-[0.99] transition">
-            <HiUpload className="w-4 h-4" />
+          <label
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer hover:bg-blue-700 active:scale-[0.99] transition">
+            <HiUpload className="w-4 h-4"/>
             <span>Импорт слов</span>
             <input
               type="file"
