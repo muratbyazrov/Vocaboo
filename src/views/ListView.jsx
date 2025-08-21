@@ -65,7 +65,6 @@ export default function ListView({ words, setWords }) {
         p-3 sm:p-6
         max-w-xl w-full mx-auto
       "
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}
     >
       {/* Хедер */}
       <div className="flex items-center justify-between mb-1">
@@ -196,7 +195,7 @@ export default function ListView({ words, setWords }) {
                 rounded-2xl border border-gray-200
                 divide-y divide-gray-100
               "
-              style={{ maxHeight: '60svh' }}
+              style={{ maxHeight: '67svh' }}
               role="list"
               aria-label="Список слов"
             >
