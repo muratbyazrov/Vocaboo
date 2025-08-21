@@ -272,7 +272,7 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
 
                           {/* Подпись */}
                           <div className="px-4 py-3">
-                            <div className={classNames('text-base font-medium truncate', labelStateClass)} title={c}>
+                          <div className={classNames('text-base font-medium truncate', labelStateClass)} title={c}>
                               {titleCase(c)}
                             </div>
                           </div>
