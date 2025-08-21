@@ -77,17 +77,9 @@ export default function ListView({ words, setWords }) {
       {/* Импорт / Экспорт */}
       {!editingId && (
         <div className="mb-3 flex flex-row gap-4 items-center">
-          <button
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm hover:bg-green-700 active:scale-[0.99] transition"
-            onClick={() => exportWords(words)}
-          >
-            <HiDownload className="w-4 h-4"/>
-            <span>Экспорт слов</span>
-          </button>
-
           <label
             className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm cursor-pointer hover:bg-blue-700 active:scale-[0.99] transition">
-            <HiUpload className="w-4 h-4"/>
+            <HiDownload className="w-4 h-4"/>
             <span>Импорт слов</span>
             <input
               type="file"
@@ -96,6 +88,14 @@ export default function ListView({ words, setWords }) {
               onChange={handleImportWordsFactory(words, setWords)}
             />
           </label>
+
+          <button
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm hover:bg-green-700 active:scale-[0.99] transition"
+            onClick={() => exportWords(words)}
+          >
+            <HiUpload className="w-4 h-4"/>
+            <span>Экспорт слов</span>
+          </button>
         </div>
       )}
 
@@ -108,7 +108,7 @@ export default function ListView({ words, setWords }) {
             /* Режим редактирования */
             <div className="rounded-2xl border border-gray-200 bg-gray-50">
               <div className="px-3 sm:px-4 pt-3 sm:pt-4">
-                <div className="text-xs text-gray-500 mb-3">Редактирование записи</div>
+              <div className="text-xs text-gray-500 mb-3">Редактирование записи</div>
 
                 <div className="space-y-4">
                   <div>
