@@ -181,7 +181,7 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
         ) : (
           <>
             {/* Header */}
-            <div className="w-full flex items-center justify-between mb-2">
+            <div className="w-full flex items-center justify-between">
               <div className="text-xs text-gray-500">
                 {queue.length ? `Карточка ${currentIdx + 1} / ${queue.length}` : '—'}
               </div>
@@ -200,8 +200,8 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
 
             {current && (
               <>
-                <div className="text-center mb-2">
-                  <div className="text-xl font-semibold">{titleCase(current.ru)}</div>
+                <div className="text-center mb-3">
+                  <div className="text-2xl font-semibold">{titleCase(current.ru)}</div>
                 </div>
 
                 {/* Контейнер сетки — на всю оставшуюся высоту */}
@@ -251,7 +251,7 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
                         >
                           {/* Изображение */}
                           <div
-                            className="w-full max-w-[320px] aspect-[3/9] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center mb-3 relative">
+                            className="w-full max-w-[320px] aspect-[3/9] bg-gray-100 overflow-hidden flex items-center justify-center relative">
                             {loading ? (
                               <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
                                 Ищу картинку…
@@ -273,7 +273,7 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
 
                           {/* Подпись */}
                           <div className="px-4 py-3">
-                            <div className={classNames('text-lg font-medium truncate', labelStateClass)} title={c}>
+                            <div className={classNames('text-xl font-medium truncate', labelStateClass)} title={c}>
                               {titleCase(c)}
                             </div>
                           </div>
