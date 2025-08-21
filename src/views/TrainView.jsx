@@ -131,7 +131,6 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
             {current && (
               <>
                 <div className="text-center mb-2">
-                  <div className="text-xs text-gray-500 mb-1">Выберите перевод на английском:</div>
                   <div className="text-xl font-semibold">{titleCase(current.ru)}</div>
                 </div>
 
