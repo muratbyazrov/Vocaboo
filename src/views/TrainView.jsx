@@ -282,8 +282,12 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
                   </div>
                 </div>
 
-                {/* Подсказка-рекап */}
-                {revealed && <RevealPanel correctAnswer={current.en} />}
+                {revealed && (
+                  <RevealPanel
+                    correctAnswer={current.en}
+                    isCorrect={!awaitingCorrect} // если не ждём повторного ответа — ответ был правильным
+                  />
+                )}
               </>
             )}
           </>
