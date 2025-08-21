@@ -4,21 +4,49 @@ import {isValidHttpUrl} from '../utils/url.js';
 async function fetchImageFromPexels(enWord, apiKey, signal) {
   const term = (enWord || '').toString().trim();
   if (!term || !apiKey) return null;
-  const q = encodeURIComponent(term);
-  // orientation=square как в твоём коде, можно заменить на landscape под 3:2
-  const url = `https://api.pexels.com/v1/search?query=${q}&per_page=1&orientation=square`;
-  try {
-    const res = await fetch(url, {signal, headers: {Authorization: apiKey}});
-    if (!res.ok) throw new Error(`Pexels ${res.status}`);
-    const data = await res.json();
-    const photo = Array.isArray(data?.photos) ? data.photos[0] : null;
-    const src = photo?.src?.large || photo?.src?.medium || photo?.src?.original;
-    return isValidHttpUrl(src) ? src : null;
-  } catch (e) {
-    if (e?.name !== 'AbortError') console.warn('Pexels fetch failed', e);
-    return null;
+
+  const base = 'https://api.pexels.com/v1/search';
+  const headers = { Authorization: apiKey };
+
+  // сначала самое строгое условие, потом слабее и слабее
+  const attempts = [
+    `${base}?query=${encodeURIComponent(term)}&per_page=12&orientation=square`,     // 1. нужно квадратное
+    `${base}?query=${encodeURIComponent(term)}&per_page=12&orientation=landscape`, // 2. ок, возьмем landscape
+    `${base}?query=${encodeURIComponent(term)}&per_page=12&orientation=portrait`,  // 3. портретка
+    `${base}?query=${encodeURIComponent(term)}&per_page=12`,                       // 4. вообще без ограничений
+  ];
+
+  const pickSrc = (src) =>
+    src?.large ||
+    src?.medium ||
+    src?.landscape ||
+    src?.portrait ||
+    src?.original ||
+    src?.tiny ||
+    null;
+
+  for (const url of attempts) {
+    try {
+      const res = await fetch(url, { signal, headers });
+      if (!res.ok) {
+        console.warn(`Pexels error ${res.status}`);
+        continue;
+      }
+      const data = await res.json();
+      const photos = Array.isArray(data?.photos) ? data.photos : [];
+      for (const p of photos) {
+        const src = pickSrc(p?.src);
+        if (isValidHttpUrl(src)) return src;
+      }
+    } catch (e) {
+      if (e?.name === 'AbortError') return null;
+      console.warn('Pexels fetch failed', e);
+    }
   }
+
+  return null;
 }
+
 
 /**
  * Универсальный резолвер картинки для слова
