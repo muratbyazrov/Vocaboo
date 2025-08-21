@@ -151,7 +151,7 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
         timersRef.current.push(
           setTimeout(() => {
             gotoNextCard();
-          }, 500) // короткая «зелёная вспышка»
+          }, 800) // короткая «зелёная вспышка»
         );
       } else {
         // неправильный: оставляем зелёным правильный вариант и красным выбранный,
