@@ -166,7 +166,7 @@ export default function ListView({ words, setWords }) {
                 }}
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2 sm:gap-3 mt-2">
+                  <div className="flex items-center gap-2 sm:gap-3 mt-4">
                     <button
                       className="w-full sm:w-auto px-4 py-2 rounded-xl bg-green-600 text-white text-sm disabled:opacity-60 hover:bg-green-700 transition"
                       onClick={saveEdit}
