@@ -19,7 +19,6 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
   const [revealed, setRevealed] = useState(false);       // включает окраску карточек
   const [selectedChoice, setSelectedChoice] = useState(null);
   const [locked, setLocked] = useState(false);           // временная блокировка кликов для анимации
-  const [warn, setWarn] = useState('');
   const [awaitingCorrect, setAwaitingCorrect] = useState(false); // ждём правильный клик после ошибки
 
   const hasWords = Array.isArray(words) && words.length > 0;
@@ -41,7 +40,6 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
     setRevealed(false);
     setSelectedChoice(null);
     setLocked(false);
-    setWarn('');
     setAwaitingCorrect(false);
     clearTimers();
   }, [hasWords, words.length]);
@@ -63,7 +61,6 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
     setRevealed(false);
     setSelectedChoice(null);
     setLocked(false);
-    setWarn('');
     setAwaitingCorrect(false);
     clearTimers();
 
@@ -97,7 +94,6 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
   const gotoNextCard = useCallback(() => {
     setRevealed(false);
     setSelectedChoice(null);
-    setWarn('');
     setAwaitingCorrect(false);
     if (currentIdx + 1 < queue.length) {
       setCurrentIdx((i) => i + 1);
@@ -145,7 +141,6 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
         // показываем зелёную подсветку и переходим к следующей
         setRevealed(true);
         setLocked(true);
-        setWarn('');
         setAwaitingCorrect(false);
 
         timersRef.current.push(
@@ -157,9 +152,7 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
         // неправильный: оставляем зелёным правильный вариант и красным выбранный,
         // остаёмся на этой карточке, пока не нажмут правильный
         setRevealed(true);
-        setWarn('Неверно. Выбери правильный вариант.');
         setAwaitingCorrect(true);
-
         // короткая блокировка от двойного клика
         setLocked(true);
         timersRef.current.push(setTimeout(() => setLocked(false), 300));
@@ -187,15 +180,11 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
               </div>
             </div>
 
-            {/* Предупреждение при ошибке */}
-            {warn && (
-              <div
-                role="alert"
-                aria-live="polite"
-                className="mb-2 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
-              >
-                {warn}
-              </div>
+            {revealed && (
+              <RevealPanel
+                correctAnswer={current.en}
+                isCorrect={!awaitingCorrect} // если не ждём повторного ответа — ответ был правильным
+              />
             )}
 
             {current && (
@@ -282,13 +271,6 @@ export default function TrainView({ words, progress, setProgress, settingsKey })
                     })}
                   </div>
                 </div>
-
-                {revealed && (
-                  <RevealPanel
-                    correctAnswer={current.en}
-                    isCorrect={!awaitingCorrect} // если не ждём повторного ответа — ответ был правильным
-                  />
-                )}
               </>
             )}
           </>
